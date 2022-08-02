@@ -80,11 +80,11 @@ def bug_to_types(
 
     return list(
         types.union(
-            set(
+            {
                 KEYWORD_DICT[keyword]
                 for keyword in bug["keywords"]
                 if keyword in KEYWORD_DICT
-            )
+            }
         )
     )
 
@@ -168,8 +168,9 @@ class BugTypeModel(BugModel):
 
         for type_ in TYPE_LIST:
             logger.info(
-                f"{sum(1 for target in classes.values() if target[TYPE_LIST.index(type_)] == 1)} {type_} bugs"
+                f"{sum(target[TYPE_LIST.index(type_)] == 1 for target in classes.values())} {type_} bugs"
             )
+
 
         return classes, TYPE_LIST
 
@@ -184,9 +185,5 @@ class BugTypeModel(BugModel):
     ):
         for i, bug in enumerate(bugs):
             for type_ in bug_to_types(bug):
-                if probabilities:
-                    classes[i][TYPE_LIST.index(type_)] = 1.0
-                else:
-                    classes[i][TYPE_LIST.index(type_)] = 1
-
+                classes[i][TYPE_LIST.index(type_)] = 1.0 if probabilities else 1
         return classes

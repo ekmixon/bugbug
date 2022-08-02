@@ -36,15 +36,16 @@ class PastBugsCollector(object):
         )
         bug_fixing_commits = list(db.read(BUG_FIXING_COMMITS_DB))
 
-        bug_fixing_commits_nodes = set(
+        bug_fixing_commits_nodes = {
             bug_fixing_commit["rev"]
             for bug_fixing_commit in bug_fixing_commits
             if bug_fixing_commit["type"] in ("d", "r")
-        )
+        }
+
 
         logger.info(f"{len(bug_fixing_commits_nodes)} bug-fixing commits to analyze")
 
-        all_bug_ids = set(commit["bug_id"] for commit in repository.get_commits())
+        all_bug_ids = {commit["bug_id"] for commit in repository.get_commits()}
 
         bug_map = {
             bug["id"]: bug for bug in bugzilla.get_bugs() if bug["id"] in all_bug_ids

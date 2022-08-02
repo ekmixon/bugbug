@@ -75,7 +75,4 @@ class RustCodeAnalysisServer:
         url = f"{self.base_url}/metrics?file_name={filename}&unit={unit}"
         r = requests.post(url, data=code, headers=HEADERS)
 
-        if not r.ok:
-            return {}
-
-        return r.json()
+        return r.json() if r.ok else {}

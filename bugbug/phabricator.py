@@ -119,7 +119,7 @@ def get(
 
 def download_revisions(rev_ids: Collection[int]) -> None:
     old_rev_count = 0
-    new_rev_ids = set(int(rev_id) for rev_id in rev_ids)
+    new_rev_ids = {int(rev_id) for rev_id in rev_ids}
     for rev in get_revisions():
         old_rev_count += 1
         if rev["id"] in new_rev_ids:
@@ -151,7 +151,7 @@ def download_modified_revisions():
             return
 
     modified_revisions = get(modified_start=last_modified)
-    modified_revision_ids = set(rev["id"] for rev in modified_revisions)
+    modified_revision_ids = {rev["id"] for rev in modified_revisions}
 
     db.delete(REVISIONS_DB, lambda revision: revision["id"] in modified_revision_ids)
 
@@ -166,12 +166,9 @@ def get_testing_project(rev: RevisionDict) -> Optional[str]:
     ]
 
     if len(testing_projects) > 1:
-        logger.warning("Revision D{} has more than one testing tag.".format(rev["id"]))
+        logger.warning(f'Revision D{rev["id"]} has more than one testing tag.')
 
-    if len(testing_projects) == 0:
-        return None
-
-    return testing_projects[-1]
+    return testing_projects[-1] if testing_projects else None
 
 
 def get_review_dates(
@@ -196,10 +193,10 @@ def get_review_dates(
                 datetime.utcfromtimestamp(transaction["dateCreated"])
             )
 
-        if transaction["type"] in ("request-review", "update", "reopen"):
-            if len(exclusion_start_dates) == 0:
-                continue
-
+        if (
+            transaction["type"] in ("request-review", "update", "reopen")
+            and exclusion_start_dates
+        ):
             exclusion_end_dates.append(
                 datetime.utcfromtimestamp(transaction["dateCreated"])
             )
@@ -216,7 +213,7 @@ def get_first_review_time(rev: RevisionDict) -> Optional[timedelta]:
     ) = get_review_dates(rev)
 
     if creation_date is None:
-        logger.warning("Revision D{} has no creation date.".format(rev["id"]))
+        logger.warning(f'Revision D{rev["id"]} has no creation date.')
         return None
 
     if len(review_dates) == 0:
@@ -232,21 +229,21 @@ def get_first_review_time(rev: RevisionDict) -> Optional[timedelta]:
         and first_exclusion_end_date is not None
         and first_exclusion_start_date > first_exclusion_end_date
     ):
-        logger.warning("Revision D{} was in an inconsistent state.".format(rev["id"]))
+        logger.warning(f'Revision D{rev["id"]} was in an inconsistent state.')
 
     if (
         first_exclusion_start_date is None
         or first_exclusion_start_date > first_review_date
     ):
         return first_review_date - creation_date
-    elif first_exclusion_start_date is not None and (
-        first_exclusion_end_date is None or first_exclusion_end_date > first_review_date
+    elif (
+        first_exclusion_end_date is None
+        or first_exclusion_end_date > first_review_date
     ):
         logger.warning(
-            "Revision D{} was accepted while in 'planned changes' or 'closed' state.".format(
-                rev["id"]
-            )
+            f"""Revision D{rev["id"]} was accepted while in 'planned changes' or 'closed' state."""
         )
+
         return first_review_date - creation_date
     else:
         return (
@@ -263,7 +260,7 @@ def get_pending_review_time(rev: RevisionDict) -> Optional[timedelta]:
     creation_date, _, exclusion_start_dates, exclusion_end_dates = get_review_dates(rev)
 
     if creation_date is None:
-        logger.warning("Revision D{} has no creation date.".format(rev["id"]))
+        logger.warning(f'Revision D{rev["id"]} has no creation date.')
         return None
 
     last_exclusion_start_date = max(exclusion_start_dates, default=None)
@@ -274,10 +271,9 @@ def get_pending_review_time(rev: RevisionDict) -> Optional[timedelta]:
         or last_exclusion_start_date > last_exclusion_end_date
     ):
         logger.warning(
-            "Revision D{} was in an inconsistent state (needs review, but is in an exception timespan).".format(
-                rev["id"]
-            )
+            f'Revision D{rev["id"]} was in an inconsistent state (needs review, but is in an exception timespan).'
         )
+
 
     if last_exclusion_end_date is not None:
         return datetime.utcnow() - last_exclusion_end_date

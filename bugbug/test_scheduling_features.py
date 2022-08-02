@@ -21,9 +21,10 @@ class platform(object):
                 if p in test_job["name"][: test_job["name"].index("/")]:
                     platforms.append(ps[0])
                     break
-        assert len(platforms) == 1, "Wrong platforms ({}) in {}".format(
-            platforms, test_job["name"]
-        )
+        assert (
+            len(platforms) == 1
+        ), f'Wrong platforms ({platforms}) in {test_job["name"]}'
+
         return platforms[0]
 
 
@@ -132,30 +133,22 @@ class arch(object):
             ("32", "x86", "i386"),
         ):
             for a in arcs:
-                if a in test_job["name"][: test_job["name"].index("/")]:
-                    if a == "64" and "aarch64" in archs:
-                        continue
-                    elif a == "x86" and "64" in archs:
-                        continue
+                if (
+                    a in test_job["name"][: test_job["name"].index("/")]
+                    and (a != "64" or "aarch64" not in archs)
+                    and (a != "x86" or "64" not in archs)
+                ):
                     archs.add(arcs[0])
-        assert len(archs) == 1, "Wrong architectures ({}) in {}".format(
-            archs, test_job["name"]
-        )
+        assert len(archs) == 1, f'Wrong architectures ({archs}) in {test_job["name"]}'
         return archs.pop()
 
 
 def get_manifest(runnable):
-    if isinstance(runnable, str):
-        return runnable
-    else:
-        return runnable[1]
+    return runnable if isinstance(runnable, str) else runnable[1]
 
 
 def commonprefix(path1, path2):
-    for i, c in enumerate(path1):
-        if c != path2[i]:
-            return path1[:i]
-    return path1
+    return next((path1[:i] for i, c in enumerate(path1) if c != path2[i]), path1)
 
 
 class path_distance(object):
@@ -211,13 +204,12 @@ class same_component(object):
         if manifest.encode("utf-8") not in component_mapping:
             return None
 
-        touches_same_component = any(
+        return any(
             component_mapping[manifest.encode("utf-8")]
             == component_mapping[f.encode("utf-8")]
             for f in commit["files"]
             if f.encode("utf-8") in component_mapping
         )
-        return touches_same_component
 
 
 class manifest_suite(object):

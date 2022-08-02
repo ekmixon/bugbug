@@ -33,10 +33,7 @@ class TestingPolicyStatsGenerator(object):
         for commit in repository.get_commits():
             pass
 
-        repository.download_commits(
-            repo_dir,
-            rev_start="children({})".format(commit["node"]),
-        )
+        repository.download_commits(repo_dir, rev_start=f'children({commit["node"]})')
 
         logger.info("Downloading revisions database...")
         assert db.download(phabricator.REVISIONS_DB)

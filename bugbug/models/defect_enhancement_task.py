@@ -17,19 +17,12 @@ class DefectEnhancementTaskModel(DefectModel):
     def get_labels(self) -> Tuple[Dict[int, Any], List[Any]]:
         classes = self.get_bugbug_labels("defect_enhancement_task")
 
+        print(f'{sum(label == "defect" for label in classes.values())} defects')
         print(
-            "{} defects".format(
-                sum(1 for label in classes.values() if label == "defect")
-            )
+            f'{sum(label == "enhancement" for label in classes.values())} enhancements'
         )
-        print(
-            "{} enhancements".format(
-                sum(1 for label in classes.values() if label == "enhancement")
-            )
-        )
-        print(
-            "{} tasks".format(sum(1 for label in classes.values() if label == "task"))
-        )
+
+        print(f'{sum(label == "task" for label in classes.values())} tasks')
 
         return classes, ["defect", "enhancement", "task"]
 
@@ -46,9 +39,9 @@ class DefectEnhancementTaskModel(DefectModel):
                 )
                 or len(bug["regressed_by"]) > 0
             ):
-                classes[i] = "defect" if not probabilities else [1.0, 0.0, 0.0]
+                classes[i] = [1.0, 0.0, 0.0] if probabilities else "defect"
             elif "feature" in bug["keywords"]:
-                classes[i] = "enhancement" if not probabilities else [0.0, 1.0, 0.0]
+                classes[i] = [0.0, 1.0, 0.0] if probabilities else "enhancement"
 
         return classes
 

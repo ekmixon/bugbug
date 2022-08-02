@@ -119,9 +119,7 @@ class MicroannotateGenerator(object):
                 )
             )()
         except subprocess.CalledProcessError as e:
-            # When the repo is empty.
-            if b"Couldn't find remote ref master" in e.stdout:
-                pass
+            pass
 
 
 def main():

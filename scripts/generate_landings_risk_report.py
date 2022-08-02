@@ -86,7 +86,7 @@ def is_fuzzblocker(bug: bugzilla.BugDict) -> bool:
 
 
 def get_full_component(bug):
-    return "{}::{}".format(bug["product"], bug["component"])
+    return f'{bug["product"]}::{bug["component"]}'
 
 
 def histogram(components: List[str]) -> Dict[str, float]:
@@ -133,10 +133,7 @@ class LandingsRiskReportGenerator(object):
         for commit in repository.get_commits():
             pass
 
-        repository.download_commits(
-            repo_dir,
-            rev_start="children({})".format(commit["node"]),
-        )
+        repository.download_commits(repo_dir, rev_start=f'children({commit["node"]})')
 
         # Some commits that were already in the DB from the previous run might need
         # to be updated (e.g. coverage information).
@@ -344,7 +341,7 @@ class LandingsRiskReportGenerator(object):
         logger.info(f"Retrieving bug IDs since {days} days ago")
         timespan_ids = bugzilla.get_ids_between(since, resolution=["---", "FIXED"])
 
-        return list(set(commit["bug_id"] for commit in commits) | set(timespan_ids))
+        return list({commit["bug_id"] for commit in commits} | set(timespan_ids))
 
     def get_regressors_of(self, bug_ids: List[int]) -> List[int]:
         bugzilla.download_bugs(bug_ids)
@@ -415,8 +412,9 @@ class LandingsRiskReportGenerator(object):
 
                 for component in test_info["tests"].keys():
                     test_infos[date_str]["skips"][component] = sum(
-                        1 for test in test_info["tests"][component] if "skip-if" in test
+                        "skip-if" in test for test in test_info["tests"][component]
                     )
+
             except requests.exceptions.HTTPError:
                 # If we couldn't find a test info artifact for the given date, assume the number of skip-ifs didn't change from the previous day.
                 assert prev_skips is not None

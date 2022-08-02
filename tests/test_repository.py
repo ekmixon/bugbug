@@ -599,7 +599,7 @@ def test_download_commits(fake_hg_repo, use_single_process):
     )
     assert len(commits) == 0
     commits = list(repository.get_commits())
-    assert len(commits) == 0
+    assert not commits
 
     # Wait one second, to have a different pushdate.
     time.sleep(1)
@@ -693,7 +693,7 @@ def test_download_commits(fake_hg_repo, use_single_process):
         use_single_process=use_single_process,
     )
     assert len(commits) == 0
-    assert len(list(repository.get_commits())) == 0
+    assert not list(repository.get_commits())
 
 
 def test_get_directories():
@@ -769,7 +769,7 @@ def test_set_commits_to_ignore(ignored_commits_to_test):
 
     repository.set_commits_to_ignore(hg, local, commits)
 
-    assert set(commit.node for commit in commits if commit.ignored) == {
+    assert {commit.node for commit in commits if commit.ignored} == {
         "8ba995b74e18334ab3707f27e9eb8f4e37ba3d29",
         "commit_with_ignore_in_desc",
     }
@@ -782,37 +782,43 @@ def test_filter_commits(ignored_commits_to_test):
 
     commits = [commit.to_dict() for commit in commits]
 
-    assert set(commit["node"] for commit in repository.filter_commits(commits)) == {
+    assert {
+        commit["node"] for commit in repository.filter_commits(commits)
+    } == {
         "commit_backedout",
         "commit",
     }
 
-    assert set(
+
+    assert {
         commit["node"]
         for commit in repository.filter_commits(commits, include_no_bug=True)
-    ) == {"commit_backedout", "commit", "commit_no_bug"}
+    } == {"commit_backedout", "commit", "commit_no_bug"}
 
-    assert set(
+
+    assert {
         commit["node"]
         for commit in repository.filter_commits(commits, include_backouts=True)
-    ) == {"commit_backedout", "commit", "commit_backout"}
+    } == {"commit_backedout", "commit", "commit_backout"}
 
-    assert set(
+
+    assert {
         commit["node"]
         for commit in repository.filter_commits(commits, include_ignored=True)
-    ) == {
+    } == {
         "commit_backedout",
         "commit",
         "8ba995b74e18334ab3707f27e9eb8f4e37ba3d29",
         "commit_with_ignore_in_desc",
     }
 
-    assert set(
+
+    assert {
         commit["node"]
         for commit in repository.filter_commits(
             commits, include_no_bug=True, include_ignored=True
         )
-    ) == {
+    } == {
         "commit_backedout",
         "commit",
         "commit_no_bug",
@@ -820,12 +826,16 @@ def test_filter_commits(ignored_commits_to_test):
         "commit_with_ignore_in_desc",
     }
 
-    assert set(
+
+    assert {
         commit["node"]
         for commit in repository.filter_commits(
-            commits, include_no_bug=True, include_backouts=True, include_ignored=True
+            commits,
+            include_no_bug=True,
+            include_backouts=True,
+            include_ignored=True,
         )
-    ) == {
+    } == {
         "commit_backedout",
         "commit",
         "commit_no_bug",
@@ -1772,9 +1782,11 @@ def test_get_touched_functions():
     code_analysis_server = rust_code_analysis_server.RustCodeAnalysisServer()
 
     def _func_list_to_set(functions):
-        return set(
-            (func["name"], func["start_line"], func["end_line"]) for func in functions
-        )
+        return {
+            (func["name"], func["start_line"], func["end_line"])
+            for func in functions
+        }
+
 
     metrics = code_analysis_server.metrics(
         "file.cpp",
@@ -2205,10 +2217,11 @@ def test_get_commits():
     ]
     # 10 mock commits, 1 ignored, 1 backouts, 1 no_bug, 1 no_bug and ignored, 1 no_bug, ignored, and backouts
     assert len(retrieved_commits) == 5
-    assert not any(
-        excluded_commit in {c["node"] for c in retrieved_commits}
+    assert all(
+        excluded_commit not in {c["node"] for c in retrieved_commits}
         for excluded_commit in excluded_commits
     )
+
 
     retrieved_commits = list(repository.get_commits(include_backouts=True))
     assert len(retrieved_commits) == 6

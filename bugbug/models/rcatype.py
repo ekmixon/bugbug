@@ -147,7 +147,7 @@ class RCATypeModel(BugModel):
             )
 
             if rca_whiteboard_split[1] not in self.RCA_LIST:
-                logger.warning(rca_whiteboard_split[1] + " not in RCA_LIST")
+                logger.warning(f"{rca_whiteboard_split[1]} not in RCA_LIST")
             else:
                 rca.append(rca_whiteboard_split[1])
         return rca
@@ -169,9 +169,5 @@ class RCATypeModel(BugModel):
         for i in len(classes):
             for rca in rca_values[i]:
                 if rca in self.RCA_LIST:
-                    if probabilities:
-                        classes[i][self.RCA_LIST.index(rca)] = 1.0
-                    else:
-                        classes[i][self.RCA_LIST.index(rca)] = 1
-
+                    classes[i][self.RCA_LIST.index(rca)] = 1.0 if probabilities else 1
         return classes

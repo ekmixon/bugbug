@@ -13,7 +13,10 @@ def count(is_first_task, is_second_task):
 
     print(f"Analyzing {len(push_data)} pushes...")
 
-    all_tasks = set(task for _, _, push_tasks, _, _ in push_data for task in push_tasks)
+    all_tasks = {
+        task for _, _, push_tasks, _, _ in push_data for task in push_tasks
+    }
+
 
     print(f"Considering {len(all_tasks)} tasks...")
 
@@ -38,7 +41,7 @@ def count(is_first_task, is_second_task):
             task.split("/")[1] for task in push_tasks if is_second_task(task)
         ]
 
-        if len(first_group_tasks) == 0 and len(second_group_tasks) == 0:
+        if not first_group_tasks and not second_group_tasks:
             continue
 
         in_both_tasks = set(first_group_tasks) & set(second_group_tasks)
@@ -58,12 +61,12 @@ def count(is_first_task, is_second_task):
         first_failures = [task for task in failures if is_first_task(task)]
         second_failures = [task for task in failures if is_second_task(task)]
 
-        if len(first_failures) > 0 or len(second_failures) > 0:
+        if first_failures or second_failures:
             count_any_of_the_two += 1
 
-        if len(first_failures) > 0 and len(second_failures) == 0:
+        if first_failures and not second_failures:
             count_first_but_not_second += 1
-        elif len(first_failures) == 0 and len(second_failures) > 0:
+        elif not first_failures and len(second_failures) > 0:
             count_second_but_not_first += 1
 
     return (

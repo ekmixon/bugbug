@@ -65,40 +65,40 @@ class StepsToReproduceModel(BugModel):
         classes = {}
 
         for bug_data in bugzilla.get_bugs():
-            if "cf_has_str" in bug_data:
-                if bug_data["cf_has_str"] == "no":
-                    classes[int(bug_data["id"])] = 0
-                elif bug_data["cf_has_str"] == "yes":
-                    classes[int(bug_data["id"])] = 1
-            elif "stepswanted" in bug_data["keywords"]:
+            if (
+                "cf_has_str" in bug_data
+                and bug_data["cf_has_str"] == "no"
+                or "cf_has_str" not in bug_data
+                and "stepswanted" in bug_data["keywords"]
+            ):
                 classes[int(bug_data["id"])] = 0
-            else:
+            elif "cf_has_str" in bug_data and bug_data["cf_has_str"] == "yes":
+                classes[int(bug_data["id"])] = 1
+            elif "cf_has_str" not in bug_data:
                 for entry in bug_data["history"]:
                     for change in entry["changes"]:
                         if change["removed"].startswith("stepswanted"):
                             classes[int(bug_data["id"])] = 1
 
         print(
-            "{} bugs have no steps to reproduce".format(
-                sum(1 for label in classes.values() if label == 0)
-            )
+            f"{sum(label == 0 for label in classes.values())} bugs have no steps to reproduce"
         )
+
         print(
-            "{} bugs have steps to reproduce".format(
-                sum(1 for label in classes.values() if label == 1)
-            )
+            f"{sum(label == 1 for label in classes.values())} bugs have steps to reproduce"
         )
+
 
         return classes, [0, 1]
 
     def overwrite_classes(self, bugs, classes, probabilities):
         for i, bug in enumerate(bugs):
             if "cf_has_str" in bug and bug["cf_has_str"] == "no":
-                classes[i] = 0 if not probabilities else [1.0, 0.0]
+                classes[i] = [1.0, 0.0] if probabilities else 0
             elif "cf_has_str" in bug and bug["cf_has_str"] == "yes":
-                classes[i] = 1 if not probabilities else [0.0, 1.0]
+                classes[i] = [0.0, 1.0] if probabilities else 1
             elif "stepswanted" in bug["keywords"]:
-                classes[i] = 0 if not probabilities else [1.0, 0.0]
+                classes[i] = [1.0, 0.0] if probabilities else 0
 
         return classes
 

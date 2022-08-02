@@ -126,7 +126,7 @@ class functions_touched_size(object):
         return {
             "Total functions size": sum(function_sizes),
             "Average functions size": sum(function_sizes) / len(function_sizes)
-            if len(function_sizes) > 0
+            if function_sizes
             else 0,
             "Maximum functions size": max(function_sizes, default=0),
             "Minimum functions size": min(function_sizes, default=0),
@@ -233,25 +233,26 @@ def merge_function_metrics(objects):
     metrics = {}
 
     for metric in repository.METRIC_NAMES:
-        metrics.update(
-            {
-                f"{metric}_avg": sum(
-                    obj["metrics"][f"{metric}_total"] for obj in objects
-                )
-                / len(objects)
-                if len(objects) > 0
-                else 0.0,
-                f"{metric}_max": max(
-                    (obj["metrics"][f"{metric}_total"] for obj in objects), default=0
-                ),
-                f"{metric}_min": min(
-                    (obj["metrics"][f"{metric}_total"] for obj in objects), default=0
-                ),
-                f"{metric}_total": sum(
-                    obj["metrics"][f"{metric}_total"] for obj in objects
-                ),
-            }
-        )
+        metrics |= {
+            f"{metric}_avg": sum(
+                obj["metrics"][f"{metric}_total"] for obj in objects
+            )
+            / len(objects)
+            if len(objects) > 0
+            else 0.0,
+            f"{metric}_max": max(
+                (obj["metrics"][f"{metric}_total"] for obj in objects),
+                default=0,
+            ),
+            f"{metric}_min": min(
+                (obj["metrics"][f"{metric}_total"] for obj in objects),
+                default=0,
+            ),
+            f"{metric}_total": sum(
+                obj["metrics"][f"{metric}_total"] for obj in objects
+            ),
+        }
+
 
     return metrics
 
@@ -633,9 +634,12 @@ class files(object):
                 self.count[f] += 1
 
         # We no longer need to store counts for files which have low frequency.
-        to_del = set(
-            f for f, c in self.count.items() if c / self.total_commits < self.min_freq
-        )
+        to_del = {
+            f
+            for f, c in self.count.items()
+            if c / self.total_commits < self.min_freq
+        }
+
 
         for f in to_del:
             del self.count[f]
@@ -698,21 +702,22 @@ def merge_metrics(objects):
     metrics = {}
 
     for metric in repository.METRIC_NAMES:
-        metrics.update(
-            {
-                f"{metric}_avg": sum(obj["metrics"][f"{metric}_avg"] for obj in objects)
-                / len(objects),
-                f"{metric}_max": max(
-                    (obj["metrics"][f"{metric}_max"] for obj in objects)
-                ),
-                f"{metric}_min": min(
-                    (obj["metrics"][f"{metric}_min"] for obj in objects)
-                ),
-                f"{metric}_total": sum(
-                    obj["metrics"][f"{metric}_total"] for obj in objects
-                ),
-            }
-        )
+        metrics |= {
+            f"{metric}_avg": sum(
+                obj["metrics"][f"{metric}_avg"] for obj in objects
+            )
+            / len(objects),
+            f"{metric}_max": max(
+                (obj["metrics"][f"{metric}_max"] for obj in objects)
+            ),
+            f"{metric}_min": min(
+                (obj["metrics"][f"{metric}_min"] for obj in objects)
+            ),
+            f"{metric}_total": sum(
+                obj["metrics"][f"{metric}_total"] for obj in objects
+            ),
+        }
+
 
     return metrics
 
@@ -720,10 +725,14 @@ def merge_metrics(objects):
 def merge_commits(commits: Sequence[repository.CommitDict]) -> repository.CommitDict:
     return repository.CommitDict(
         {
-            "nodes": list(commit["node"] for commit in commits),
+            "nodes": [commit["node"] for commit in commits],
             "pushdate": commits[0]["pushdate"],
-            "types": list(set(sum((commit["types"] for commit in commits), []))),
-            "files": list(set(sum((commit["files"] for commit in commits), []))),
+            "types": list(
+                set(sum((commit["types"] for commit in commits), []))
+            ),
+            "files": list(
+                set(sum((commit["files"] for commit in commits), []))
+            ),
             "directories": list(
                 set(sum((commit["directories"] for commit in commits), []))
             ),
@@ -781,13 +790,17 @@ def merge_commits(commits: Sequence[repository.CommitDict]) -> repository.Commit
             "minimum_test_file_size": min(
                 commit["minimum_test_file_size"] for commit in commits
             ),
-            "source_code_added": sum(commit["source_code_added"] for commit in commits),
+            "source_code_added": sum(
+                commit["source_code_added"] for commit in commits
+            ),
             "other_added": sum(commit["other_added"] for commit in commits),
             "test_added": sum(commit["test_added"] for commit in commits),
             "source_code_deleted": sum(
                 commit["source_code_deleted"] for commit in commits
             ),
-            "other_deleted": sum(commit["other_deleted"] for commit in commits),
+            "other_deleted": sum(
+                commit["other_deleted"] for commit in commits
+            ),
             "test_deleted": sum(commit["test_deleted"] for commit in commits),
             "metrics": merge_metrics(commits),
         }
@@ -796,14 +809,16 @@ def merge_commits(commits: Sequence[repository.CommitDict]) -> repository.Commit
 
 class CommitExtractor(BaseEstimator, TransformerMixin):
     def __init__(self, feature_extractors, cleanup_functions):
-        assert len(set(type(fe) for fe in feature_extractors)) == len(
+        assert len({type(fe) for fe in feature_extractors}) == len(
             feature_extractors
         ), "Duplicate Feature Extractors"
+
         self.feature_extractors = feature_extractors
 
-        assert len(set(type(cf) for cf in cleanup_functions)) == len(
+        assert len({type(cf) for cf in cleanup_functions}) == len(
             cleanup_functions
         ), "Duplicate Cleanup Functions"
+
         self.cleanup_functions = cleanup_functions
 
     def fit(self, x, y=None):

@@ -26,14 +26,16 @@ def fetch_untriaged(args):
     untriaged_bugs = []
     for bug in bugs.values():
         for history in bug["history"]:
-            for change in history["changes"]:
+            untriaged_bugs.extend(
+                bug
+                for change in history["changes"]
                 if (
                     change["field_name"] == "component"
                     and change["removed"] == "Untriaged"
-                ):
-                    untriaged_bugs.append(bug)
+                )
+            )
 
-    with open("bugs-{}.json".format(datetime.now().strftime("%s")), "w") as f:
+    with open(f'bugs-{datetime.now().strftime("%s")}.json', "w") as f:
         json.dump(untriaged_bugs, f)
 
     return untriaged_bugs
@@ -61,16 +63,16 @@ def run_untriaged(untriaged_bugs):
                 bug["product"], bug["component"]
             )
             if not expected_component:
-                print("Skipping bug: {}".format(bug["id"]))
+                print(f'Skipping bug: {bug["id"]}')
                 continue
 
             if classifiable:
-                print("Classifying bug with ID: {}".format(bug["id"]))
+                print(f'Classifying bug with ID: {bug["id"]}')
                 classification = model.classify(bug)[0]
-                print("Classified bug as: {}".format(classification))
+                print(f"Classified bug as: {classification}")
 
             else:
-                print("Not classifiable bug: {}".format(bug["id"]))
+                print(f'Not classifiable bug: {bug["id"]}')
 
             correct_prediction = expected_component == classification
             rows.append(

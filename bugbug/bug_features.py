@@ -18,10 +18,7 @@ from bugbug import bug_snapshot, repository
 
 
 def field(bug, field):
-    if field in bug and bug[field] not in ("--", "---"):
-        return bug[field]
-
-    return None
+    return bug[field] if field in bug and bug[field] not in ("--", "---") else None
 
 
 class single_bug_feature(object):
@@ -160,7 +157,7 @@ class landings(single_bug_feature):
     name = "# of landing comments"
 
     def __call__(self, bug, **kwargs):
-        return sum(1 for c in bug["comments"] if "://hg.mozilla.org/" in c["text"])
+        return sum("://hg.mozilla.org/" in c["text"] for c in bug["comments"])
 
 
 class product(single_bug_feature):
@@ -443,24 +440,24 @@ class commit_no_of_backouts(single_bug_feature):
 class components_touched(single_bug_feature):
     def __call__(self, bug, **kwargs):
         return list(
-            set(
+            {
                 component
                 for commit in bug["commits"]
                 for component in commit["components"]
                 if not commit["backedoutby"]
-            )
+            }
         )
 
 
 class components_touched_num(single_bug_feature):
     def __call__(self, bug, **kwargs):
         return len(
-            set(
+            {
                 component
                 for commit in bug["commits"]
                 for component in commit["components"]
                 if not commit["backedoutby"]
-            )
+            }
         )
 
 
@@ -650,10 +647,7 @@ class couple_common_keywords(couple_bug_feature):
 
 
 def get_author_ids():
-    author_ids = set()
-    for commit in repository.get_commits():
-        author_ids.add(commit["author_email"])
-    return author_ids
+    return {commit["author_email"] for commit in repository.get_commits()}
 
 
 class BugExtractor(BaseEstimator, TransformerMixin):
@@ -666,14 +660,16 @@ class BugExtractor(BaseEstimator, TransformerMixin):
         commit_data=False,
         merge_data=True,
     ):
-        assert len(set(type(fe) for fe in feature_extractors)) == len(
+        assert len({type(fe) for fe in feature_extractors}) == len(
             feature_extractors
         ), "Duplicate Feature Extractors"
+
         self.feature_extractors = feature_extractors
 
-        assert len(set(type(cf) for cf in cleanup_functions)) == len(
+        assert len({type(cf) for cf in cleanup_functions}) == len(
             cleanup_functions
         ), "Duplicate Cleanup Functions"
+
         self.cleanup_functions = cleanup_functions
         self.rollback = rollback
         self.rollback_when = rollback_when

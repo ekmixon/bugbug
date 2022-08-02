@@ -111,9 +111,10 @@ def main():
             }
 
         # Process the dependencies
-        new_dependencies = []
-        for dependency in task.get("dependencies", []):
-            new_dependencies.append(id_mapping[dependency])
+        new_dependencies = [
+            id_mapping[dependency]
+            for dependency in task.get("dependencies", [])
+        ]
 
         if add_self:
             new_dependencies.append(decision_task_id)

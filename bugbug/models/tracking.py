@@ -137,6 +137,6 @@ class TrackingModel(BugModel):
     def overwrite_classes(self, bugs, classes, probabilities):
         for i, bug in enumerate(bugs):
             if bug["resolution"] in ["INVALID", "DUPLICATE"]:
-                classes[i] = 0 if not probabilities else [1.0, 0.0]
+                classes[i] = [1.0, 0.0] if probabilities else 0
 
         return classes

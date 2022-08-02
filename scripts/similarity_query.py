@@ -56,14 +56,15 @@ def main(args):
 
     bug_ids = model.get_similar_bugs(bugzilla.get(args.bug_id)[args.bug_id])
 
-    bugs = {}
-    for bug in bugzilla.get_bugs():
-        if bug["id"] in bug_ids or bug["id"] == args.bug_id:
-            bugs[bug["id"]] = bug
+    bugs = {
+        bug["id"]: bug
+        for bug in bugzilla.get_bugs()
+        if bug["id"] in bug_ids or bug["id"] == args.bug_id
+    }
 
-    print("{}: {}".format(args.bug_id, bugs[args.bug_id]["summary"]))
+    print(f'{args.bug_id}: {bugs[args.bug_id]["summary"]}')
     for bug_id in bug_ids:
-        print("{}: {}".format(bug_id, bugs[bug_id]["summary"]))
+        print(f'{bug_id}: {bugs[bug_id]["summary"]}')
 
 
 if __name__ == "__main__":

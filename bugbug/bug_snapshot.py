@@ -35,20 +35,17 @@ def keyword_mapping(keyword):
         "bug-quality": "bmo-bug-quality",
     }
 
-    return mapping[keyword] if keyword in mapping else keyword
+    return mapping.get(keyword, keyword)
 
 
 def group_mapping(group):
     mapping = {"release-core-security": "core-security-release"}
 
-    return mapping[group] if group in mapping else group
+    return mapping.get(group, group)
 
 
 def cf_rank(val):
-    if val in ["", "0"]:
-        return None
-
-    return val
+    return None if val in ["", "0"] else val
 
 
 # E.g. https://bugzilla.mozilla.org/rest/bug/1162372.
@@ -60,10 +57,7 @@ def version_to_branch(version):
 
 
 def op_sys(op_sys):
-    if op_sys == "Mac OS X":
-        return "macOS"
-
-    return op_sys
+    return "macOS" if op_sys == "Mac OS X" else op_sys
 
 
 def platform(platform):
@@ -91,7 +85,7 @@ def product(product):
         "Browser": "Core",
     }
 
-    return mapping[product] if product in mapping else product
+    return mapping.get(product, product)
 
 
 def target_milestone(target_milestone):
@@ -100,16 +94,11 @@ def target_milestone(target_milestone):
 
     mapping = {"6.2.2": "6.2.2.1", "Firefox 3.7": "Firefox 4.0"}
 
-    return (
-        mapping[target_milestone] if target_milestone in mapping else target_milestone
-    )
+    return mapping.get(target_milestone, target_milestone)
 
 
 def null_str(val):
-    if val == "":
-        return None
-
-    return val
+    return None if val == "" else val
 
 
 FIELD_TYPES = {
@@ -543,7 +532,7 @@ def rollback(bug, when=None, do_assert=False):
 
     def parse_flag_change(change):
         parts = change.split("(")
-        if len(parts) != 1 and len(parts) != 2:
+        if len(parts) not in [1, 2]:
             assert_or_log(f"Too many parts for {change}")
             return None, None, None
 
@@ -759,11 +748,14 @@ def rollback(bug, when=None, do_assert=False):
 
                 continue
 
-            if change["added"] != "---":
-                if field not in bug and not is_expected_inconsistent_field(
+            if (
+                change["added"] != "---"
+                and field not in bug
+                and not is_expected_inconsistent_field(
                     field, last_product, bug["id"]
-                ):
-                    assert_or_log(f"{field} is not present")
+                )
+            ):
+                assert_or_log(f"{field} is not present")
 
             if field in bug and isinstance(bug[field], list):
                 if change["added"]:

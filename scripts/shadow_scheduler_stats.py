@@ -33,18 +33,15 @@ db.register(
 def analyze_shadow_schedulers(
     push: mozci.push.Push,
 ) -> Dict[str, Any]:
-    schedulers = []
+    schedulers = [
+        {
+            "name": name,
+            "scheduled": list(config_groups),
+        }
+        for name, config_groups in push.generate_all_shadow_scheduler_config_groups()
+        if not isinstance(config_groups, mozci.errors.TaskNotFound)
+    ]
 
-    for name, config_groups in push.generate_all_shadow_scheduler_config_groups():
-        if isinstance(config_groups, mozci.errors.TaskNotFound):
-            continue
-
-        schedulers.append(
-            {
-                "name": name,
-                "scheduled": list(config_groups),
-            }
-        )
 
     return {
         "id": push.rev,
@@ -140,27 +137,31 @@ GROUP_TRANSLATIONS = {
 def translate_group(group):
     group = group.split(":")[0]
 
-    for prefix, value in GROUP_TRANSLATIONS.items():
-        if group.startswith(prefix):
-            return group.replace(prefix, value)
-
-    return group
+    return next(
+        (
+            group.replace(prefix, value)
+            for prefix, value in GROUP_TRANSLATIONS.items()
+            if group.startswith(prefix)
+        ),
+        group,
+    )
 
 
 def get_regressions(granularity, likely_regressions, possible_regressions):
     if granularity == "group":
-        return set(translate_group(group) for group in likely_regressions)
+        return {translate_group(group) for group in likely_regressions}
     else:
-        return set(
-            (config, translate_group(group)) for config, group in likely_regressions
-        )
+        return {
+            (config, translate_group(group))
+            for config, group in likely_regressions
+        }
 
 
 def get_scheduled(granularity, scheduler):
     if granularity == "group":
-        return set(group for config, group in scheduler["scheduled"])
+        return {group for config, group in scheduler["scheduled"]}
     else:
-        return set(tuple(s) for s in scheduler["scheduled"])
+        return {tuple(s) for s in scheduler["scheduled"]}
 
 
 def plot_graphs(granularity: str) -> None:
@@ -171,13 +172,14 @@ def plot_graphs(granularity: str) -> None:
     )
     assert db.download(push_data_db)
 
-    regressions_by_rev = {}
-    for revisions, _, _, possible_regressions, likely_regressions in db.read(
-        push_data_db
-    ):
-        regressions_by_rev[revisions[0]] = get_regressions(
+    regressions_by_rev = {
+        revisions[0]: get_regressions(
             granularity, likely_regressions, possible_regressions
         )
+        for revisions, _, _, possible_regressions, likely_regressions in db.read(
+            push_data_db
+        )
+    }
 
     scheduled_data = []
     caught_data = []
@@ -262,13 +264,14 @@ def print_uncaught(
     )
     assert db.download(push_data_db)
 
-    regressions_by_rev = {}
-    for revisions, _, _, possible_regressions, likely_regressions in db.read(
-        push_data_db
-    ):
-        regressions_by_rev[revisions[0]] = get_regressions(
+    regressions_by_rev = {
+        revisions[0]: get_regressions(
             granularity, likely_regressions, possible_regressions
         )
+        for revisions, _, _, possible_regressions, likely_regressions in db.read(
+            push_data_db
+        )
+    }
 
     for scheduler_stat in db.read(SHADOW_SCHEDULER_STATS_DB):
         if len(scheduler_stat["schedulers"]) == 0:

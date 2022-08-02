@@ -62,12 +62,9 @@ class TestFailureModel(CommitModel):
         self.clf.set_params(predictor="cpu_predictor")
 
     def items_gen(self, classes):
-        commit_map = {}
+        commit_map = {commit["node"]: commit for commit in repository.get_commits()}
 
-        for commit in repository.get_commits():
-            commit_map[commit["node"]] = commit
-
-        assert len(commit_map) > 0
+        assert commit_map
 
         for revs, test_datas in test_scheduling.get_test_scheduling_history("label"):
             if revs[0] not in classes:
@@ -76,7 +73,7 @@ class TestFailureModel(CommitModel):
             commits = tuple(
                 commit_map[revision] for revision in revs if revision in commit_map
             )
-            if len(commits) == 0:
+            if not commits:
                 continue
 
             commit_data = commit_features.merge_commits(commits)
@@ -96,16 +93,8 @@ class TestFailureModel(CommitModel):
             else:
                 classes[rev] = 0
 
-        print(
-            "{} commits failed".format(
-                sum(1 for label in classes.values() if label == 1)
-            )
-        )
-        print(
-            "{} commits did not fail".format(
-                sum(1 for label in classes.values() if label == 0)
-            )
-        )
+        print(f"{sum(label == 1 for label in classes.values())} commits failed")
+        print(f"{sum(label == 0 for label in classes.values())} commits did not fail")
 
         return classes, [0, 1]
 

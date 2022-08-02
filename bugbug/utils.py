@@ -64,10 +64,7 @@ def numpy_to_dict(array):
 
 
 def to_array(val):
-    if isinstance(val, scipy.sparse.csr_matrix):
-        return val.toarray()
-
-    return val
+    return val.toarray() if isinstance(val, scipy.sparse.csr_matrix) else val
 
 
 class StructuredColumnTransformer(ColumnTransformer):
@@ -75,9 +72,10 @@ class StructuredColumnTransformer(ColumnTransformer):
         result = super()._hstack(Xs)
 
         transformer_names = (name for name, transformer, column in self.transformers_)
-        types = []
-        for i, (f, transformer_name) in enumerate(zip(Xs, transformer_names)):
-            types.append((transformer_name, result.dtype, (f.shape[1],)))
+        types = [
+            (transformer_name, result.dtype, (f.shape[1],))
+            for f, transformer_name in zip(Xs, transformer_names)
+        ]
 
         return result.todense().view(np.dtype(types))
 
@@ -132,23 +130,17 @@ def get_secret(secret_id: str) -> Any:
     """Return the secret value"""
     env_variable_name = f"BUGBUG_{secret_id}"
 
-    # Try in the environment first
-    secret_from_env = os.environ.get(env_variable_name)
-
-    if secret_from_env:
+    if secret_from_env := os.environ.get(env_variable_name):
         return secret_from_env
 
-    # If not in env, try with TC if we have the secret id
-    tc_secret_id = os.environ.get("TC_SECRET_ID")
-
-    if tc_secret_id:
+    if tc_secret_id := os.environ.get("TC_SECRET_ID"):
         secrets = taskcluster.Secrets(get_taskcluster_options())
         secret_bucket = secrets.get(tc_secret_id)
 
         return secret_bucket["secret"][secret_id]
 
     else:
-        raise ValueError("Failed to find secret {}".format(secret_id))
+        raise ValueError(f"Failed to find secret {secret_id}")
 
 
 def get_s3_credentials() -> dict:
@@ -223,8 +215,7 @@ def download_model(model_name: str) -> str:
     path = f"{model_name}model"
     url = f"https://community-tc.services.mozilla.com/api/index/v1/task/project.bugbug.train_{model_name}.{version}/artifacts/public/{path}.zst"
     logger.info(f"Downloading {url}...")
-    updated = download_check_etag(url)
-    if updated:
+    if updated := download_check_etag(url):
         zstd_decompress(path)
         os.remove(f"{path}.zst")
     assert os.path.exists(path), "Decompressed file exists"
@@ -283,9 +274,9 @@ def extract_tar_zst(path: str) -> None:
 def extract_file(path: str) -> None:
     inner_path, _ = os.path.splitext(path)
 
-    if str(path).endswith(".tar.zst"):
+    if path.endswith(".tar.zst"):
         extract_tar_zst(path)
-    elif str(path).endswith(".zst"):
+    elif path.endswith(".zst"):
         zstd_decompress(inner_path)
     else:
         assert False, f"Unexpected compression type for {path}"
@@ -458,10 +449,7 @@ def get_hgmo_stack(branch: str, revision: str) -> List[bytes]:
             return True
 
         # Don't analyze changesets which simply specify try parameters.
-        if changeset["files"] == ["try_task_config.json"]:
-            return True
-
-        return False
+        return changeset["files"] == ["try_task_config.json"]
 
     return [
         c["node"].encode("ascii") for c in r.json()["changesets"] if not should_skip(c)
@@ -489,9 +477,7 @@ def extract_private(issue_body: str) -> Optional[tuple]:
     its owner/repository (webcompat repository usecase)
     """
     private_url = extract_metadata(issue_body).get("private_url", "").strip()
-    private_issue_path = urllib.parse.urlparse(private_url).path
-
-    if private_issue_path:
+    if private_issue_path := urllib.parse.urlparse(private_url).path:
         owner, repo, _, number = tuple(private_issue_path.split("/")[1:])
         return owner, repo, number
 

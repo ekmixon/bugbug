@@ -391,7 +391,7 @@ class ComponentNNModel(ComponentModel):
         for i, params in enumerate(self.params):
             kwargs["params"] = params
             estimator = ComponentNNClassifier(**kwargs)
-            estimators.append(("model_{}".format(i), estimator))
+            estimators.append((f"model_{i}", estimator))
 
         self.clf = VotingClassifier(
             estimators=estimators, voting="soft", weights=[1, 1, 1]

@@ -98,12 +98,14 @@ def patch_resources(monkeypatch, jobs):
         ):
             pass
 
+
+
     class JobMock:
         """Mock class to mimic rq.job.Job."""
 
         def __init__(self, job_id):
             self.job_id = job_id
-            self.enqueued_at = datetime.today()
+            self.enqueued_at = datetime.now()
             self.timeout = 10
 
         @staticmethod
@@ -118,9 +120,7 @@ def patch_resources(monkeypatch, jobs):
                 raise NoSuchJobError
 
             result_key = f"bugbug:job_result:{jobs[self.job_id][0]}"
-            if result_key in app.redis_conn.data:
-                return "finished"
-            return "started"
+            return "finished" if result_key in app.redis_conn.data else "started"
 
         def cancel(self):
             if self.job_id in jobs:
@@ -128,6 +128,7 @@ def patch_resources(monkeypatch, jobs):
 
         def cleanup(self):
             pass
+
 
     app.LOGGER.setLevel(logging.DEBUG)
     _redis = RedisMock()

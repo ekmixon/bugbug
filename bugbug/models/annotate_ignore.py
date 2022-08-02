@@ -106,16 +106,14 @@ class AnnotateIgnoreModel(CommitModel):
             classes[node] = int(label)
 
         print(
-            "{} commits that can be ignored".format(
-                sum(1 for label in classes.values() if label == 1)
-            )
+            f"{sum(label == 1 for label in classes.values())} commits that can be ignored"
         )
 
+
         print(
-            "{} commits that cannot be ignored".format(
-                sum(1 for label in classes.values() if label == 0)
-            )
+            f"{sum(label == 0 for label in classes.values())} commits that cannot be ignored"
         )
+
 
         return classes, [0, 1]
 

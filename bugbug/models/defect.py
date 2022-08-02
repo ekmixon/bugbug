@@ -178,15 +178,9 @@ class DefectModel(BugModel):
                     and bug["cf_has_regression_range"] == "yes"
                 )
             ):
-                if kind in ["bug", "regression"]:
-                    classes[bug_id] = 1
-                else:
-                    classes[bug_id] = "defect"
+                classes[bug_id] = 1 if kind in ["bug", "regression"] else "defect"
             elif any(keyword in bug["keywords"] for keyword in ["feature"]):
-                if kind in ["bug", "regression"]:
-                    classes[bug_id] = 0
-                else:
-                    classes[bug_id] = "enhancement"
+                classes[bug_id] = 0 if kind in ["bug", "regression"] else "enhancement"
             elif kind == "regression":
                 for history in bug["history"]:
                     for change in history["changes"]:
@@ -248,8 +242,8 @@ class DefectModel(BugModel):
     def get_labels(self) -> Tuple[Dict[int, Any], List[Any]]:
         classes = self.get_bugbug_labels("bug")
 
-        print("{} bugs".format(sum(1 for label in classes.values() if label == 1)))
-        print("{} non-bugs".format(sum(1 for label in classes.values() if label == 0)))
+        print(f"{sum(label == 1 for label in classes.values())} bugs")
+        print(f"{sum(label == 0 for label in classes.values())} non-bugs")
 
         return classes, [0, 1]
 
@@ -269,8 +263,8 @@ class DefectModel(BugModel):
                 )
                 or len(bug["regressed_by"]) > 0
             ):
-                classes[i] = 1 if not probabilities else [0.0, 1.0]
+                classes[i] = [0.0, 1.0] if probabilities else 1
             elif "feature" in bug["keywords"]:
-                classes[i] = 0 if not probabilities else [1.0, 0.0]
+                classes[i] = [1.0, 0.0] if probabilities else 0
 
         return classes

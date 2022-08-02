@@ -202,7 +202,7 @@ class Retriever(object):
             granularity
         )
 
-        if granularity in ("label", "config_group"):
+        if granularity in {"label", "config_group"}:
             test_scheduling.generate_failing_together_probabilities(
                 granularity, push_data_iter(), push_data_count
             )
@@ -226,7 +226,7 @@ class Retriever(object):
             skipped_too_big_commits = 0
             skipped_no_runnables = 0
 
-            if granularity in ("group", "config_group"):
+            if granularity in {"group", "config_group"}:
                 update_touched_together_gen = test_scheduling.update_touched_together()
                 next(update_touched_together_gen)
 
@@ -248,7 +248,7 @@ class Retriever(object):
                     for revision in revisions
                     if revision in commit_map
                 )
-                if len(commits) == 0:
+                if not commits:
                     skipped_no_commits += 1
                     continue
 
@@ -275,7 +275,7 @@ class Retriever(object):
                     set(push_runnables + possible_regressions + likely_regressions)
                 )
 
-                if len(runnables_to_consider) == 0:
+                if not runnables_to_consider:
                     skipped_no_runnables += 1
                     continue
 
@@ -285,7 +285,7 @@ class Retriever(object):
 
                 pushdate = dateutil.parser.parse(merged_commits["pushdate"])
 
-                if granularity in ("group", "config_group"):
+                if granularity in {"group", "config_group"}:
                     update_touched_together_gen.send(commits[0]["node"])
 
                 result_data = []
@@ -332,7 +332,7 @@ class Retriever(object):
         if granularity == "group":
             create_tar_zst(touched_together_db)
 
-        if granularity in ("label", "config_group"):
+        if granularity in {"label", "config_group"}:
             create_tar_zst(failing_together_db)
 
 

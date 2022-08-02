@@ -39,8 +39,9 @@ def main(args):
         test_bugs = [
             bug
             for bug in test_bugs.values()
-            if not bug["creator"] in REPORTERS_TO_IGNORE
+            if bug["creator"] not in REPORTERS_TO_IGNORE
         ]
+
         with open("duplicate_test_bugs.json", "w") as f:
             json.dump(test_bugs, f)
 

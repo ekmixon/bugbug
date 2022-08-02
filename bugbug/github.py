@@ -50,18 +50,17 @@ def get_token() -> str:
 def fetch_events(events_url: str) -> list:
     api_limit()
     logger.info(f"Fetching {events_url}")
-    headers = {"Authorization": "token {}".format(get_token())}
+    headers = {"Authorization": f"token {get_token()}"}
     response = requests.get(events_url, headers=headers)
     response.raise_for_status()
-    events_raw = response.json()
-    return events_raw
+    return response.json()
 
 
 def fetch_issues(
     url: str, retrieve_events: bool, params: dict = None
 ) -> Tuple[List[IssueDict], dict]:
     api_limit()
-    headers = {"Authorization": "token {}".format(get_token())}
+    headers = {"Authorization": f"token {get_token()}"}
     response = requests.get(url, params=params, headers=headers)
     response.raise_for_status()
     data = response.json()
@@ -91,7 +90,7 @@ def fetch_issues_updated_since_timestamp(
     owner: str, repo: str, state: str, since: str, retrieve_events: bool = False
 ) -> List[IssueDict]:
     # Fetches changed and new issues since a specified timestamp
-    url = "https://api.github.com/repos/{}/{}/issues".format(owner, repo)
+    url = f"https://api.github.com/repos/{owner}/{repo}/issues"
 
     params = {"state": state, "since": since, "per_page": PER_PAGE, "page": 1}
 
@@ -115,7 +114,7 @@ def download_issues(
     owner: str, repo: str, state: str, retrieve_events: bool = False
 ) -> None:
     # Fetches all issues sorted by date of creation in ascending order
-    url = "https://api.github.com/repos/{}/{}/issues".format(owner, repo)
+    url = f"https://api.github.com/repos/{owner}/{repo}/issues"
     start_page = get_start_page()
 
     params = {
@@ -145,9 +144,7 @@ def fetch_issue_by_number(
     owner: str, repo: str, issue_number: int, retrieve_events: bool = False
 ) -> IssueDict:
     # Fetches an issue by id
-    url = "https://api.github.com/repos/{}/{}/issues/{}".format(
-        owner, repo, issue_number
-    )
+    url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}"
 
     data = fetch_issues(url=url, retrieve_events=retrieve_events)
 

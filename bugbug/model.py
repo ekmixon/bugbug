@@ -106,13 +106,13 @@ def print_labeled_confusion_matrix(confusion_matrix, labels, is_multilabel=False
         else:
             table_labels = labels
 
-        confusion_matrix_header = []
-        for i in range(len(table[0])):
-            confusion_matrix_header.append(
-                f"{table_labels[i]} (Predicted)"
-                if table_labels[i] != "__NOT_CLASSIFIED__"
-                else "Not classified"
-            )
+        confusion_matrix_header = [
+            f"{table_labels[i]} (Predicted)"
+            if table_labels[i] != "__NOT_CLASSIFIED__"
+            else "Not classified"
+            for i in range(len(table[0]))
+        ]
+
         for i in range(len(table)):
             table[i].insert(0, f"{table_labels[i]} (Actual)")
         print(
@@ -132,11 +132,7 @@ def sort_class_names(class_names):
 
 class Model:
     def __init__(self, lemmatization=False):
-        if lemmatization:
-            self.text_vectorizer = SpacyVectorizer
-        else:
-            self.text_vectorizer = TfidfVectorizer
-
+        self.text_vectorizer = SpacyVectorizer if lemmatization else TfidfVectorizer
         self.cross_validation_enabled = True
         self.sampler = None
 
@@ -265,9 +261,9 @@ class Model:
             top_feature_names = []
             for importance, index, is_positive in imp_values:
                 if is_positive:
-                    shap_val.append("+" + str(importance))
+                    shap_val.append(f"+{str(importance)}")
                 else:
-                    shap_val.append("-" + str(importance))
+                    shap_val.append(f"-{str(importance)}")
 
                 feature_value = np.squeeze(
                     to_array(important_features["values"])[:, int(index)]
@@ -277,8 +273,6 @@ class Model:
                 )
             shap_val = [[predicted_class] + shap_val]
 
-        # extract importance values from the top features for all the classes
-        # when training
         else:
             top_feature_names = [
                 feature_names[int(index)]
@@ -291,11 +285,9 @@ class Model:
 
         # allow maximum of 3 columns in a row to fit the page better
         COLUMNS = 3
-        print("Top {} features:".format(len(top_feature_names)))
+        print(f"Top {len(top_feature_names)} features:")
         for i in range(0, len(top_feature_names), COLUMNS):
-            table = []
-            for item in shap_val:
-                table.append(item[i : i + COLUMNS])
+            table = [item[i : i + COLUMNS] for item in shap_val]
             print(
                 tabulate(
                     table,

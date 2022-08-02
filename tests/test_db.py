@@ -105,7 +105,7 @@ def test_register_db(tmp_path):
 
     db.register(db_path, "https://alink", 1)
 
-    assert os.path.exists(db_path.with_suffix(db_path.suffix + ".version"))
+    assert os.path.exists(db_path.with_suffix(f"{db_path.suffix}.version"))
 
 
 def test_exists_db(tmp_path):
@@ -152,8 +152,8 @@ def test_download(tmp_path, mock_zst):
     assert db.last_modified(db_path) == datetime(2019, 4, 16)
 
     assert os.path.exists(db_path)
-    assert not os.path.exists(db_path.with_suffix(db_path.suffix + ".zst"))
-    assert os.path.exists(db_path.with_suffix(db_path.suffix + ".zst.etag"))
+    assert not os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst"))
+    assert os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst.etag"))
 
 
 def test_download_missing(tmp_path, mock_zst):
@@ -214,8 +214,8 @@ def test_download_old_schema(tmp_path, mock_zst):
     assert db.last_modified(db_path) == datetime(2019, 4, 16)
 
     assert not os.path.exists(db_path)
-    assert not os.path.exists(db_path.with_suffix(db_path.suffix + ".zst"))
-    assert not os.path.exists(db_path.with_suffix(db_path.suffix + ".zst.etag"))
+    assert not os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst"))
+    assert not os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst.etag"))
 
 
 def test_download_same_schema_new_db(tmp_path, mock_zst):
@@ -262,8 +262,8 @@ def test_download_same_schema_new_db(tmp_path, mock_zst):
     assert db.download(db_path)
 
     assert os.path.exists(db_path)
-    assert not os.path.exists(db_path.with_suffix(db_path.suffix + ".zst"))
-    assert os.path.exists(db_path.with_suffix(db_path.suffix + ".zst.etag"))
+    assert not os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst"))
+    assert os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst.etag"))
 
     with open(db_path, "r") as f:
         assert f.read() == "0"
@@ -271,8 +271,8 @@ def test_download_same_schema_new_db(tmp_path, mock_zst):
     assert db.download(db_path)
 
     assert os.path.exists(db_path)
-    assert not os.path.exists(db_path.with_suffix(db_path.suffix + ".zst"))
-    assert os.path.exists(db_path.with_suffix(db_path.suffix + ".zst.etag"))
+    assert not os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst"))
+    assert os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst.etag"))
 
     with open(db_path, "r") as f:
         assert f.read() == "1"
@@ -311,7 +311,7 @@ def test_download_support_file(tmp_path, mock_zst):
     assert os.path.exists(
         os.path.join(
             os.path.dirname(db_path),
-            os.path.splitext(support_filename)[0] + ".zst.etag",
+            f"{os.path.splitext(support_filename)[0]}.zst.etag",
         )
     )
 
@@ -353,8 +353,8 @@ def test_download_with_support_files_too(tmp_path, mock_zst):
     assert db.download(db_path, support_files_too=True)
 
     assert os.path.exists(db_path)
-    assert not os.path.exists(db_path.with_suffix(db_path.suffix + ".zst"))
-    assert os.path.exists(db_path.with_suffix(db_path.suffix + ".zst.etag"))
+    assert not os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst"))
+    assert os.path.exists(db_path.with_suffix(f"{db_path.suffix}.zst.etag"))
     assert not os.path.exists(os.path.join(os.path.dirname(db_path), support_filename))
     assert os.path.exists(
         os.path.join(os.path.dirname(db_path), os.path.splitext(support_filename)[0])
@@ -362,7 +362,7 @@ def test_download_with_support_files_too(tmp_path, mock_zst):
     assert os.path.exists(
         os.path.join(
             os.path.dirname(db_path),
-            os.path.splitext(support_filename)[0] + ".zst.etag",
+            f"{os.path.splitext(support_filename)[0]}.zst.etag",
         )
     )
 
@@ -405,7 +405,7 @@ def test_is_old_schema(tmp_path):
     db_path = tmp_path / "prova.json"
     db.register(db_path, url_zst, 1, support_files=[])
 
-    assert os.path.exists(db_path.with_suffix(db_path.suffix + ".version"))
+    assert os.path.exists(db_path.with_suffix(f"{db_path.suffix}.version"))
 
     responses.add(responses.GET, url_version, status=404)
     responses.add(responses.GET, url_version, status=424)

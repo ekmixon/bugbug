@@ -207,12 +207,14 @@ def schedule_tests(branch: str, rev: str) -> str:
         tasks = testlabelselect_model.select_tests(commits, test_selection_threshold)
 
         reduced = testlabelselect_model.reduce(
-            set(t for t, c in tasks.items() if c >= 0.8), 1.0
+            {t for t, c in tasks.items() if c >= 0.8}, 1.0
         )
 
+
         reduced_higher = testlabelselect_model.reduce(
-            set(t for t, c in tasks.items() if c >= 0.9), 1.0
+            {t for t, c in tasks.items() if c >= 0.9}, 1.0
         )
+
 
         groups = testgroupselect_model.select_tests(commits, test_selection_threshold)
 

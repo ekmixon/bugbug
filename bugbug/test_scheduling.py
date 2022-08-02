@@ -123,17 +123,16 @@ JOBS_TO_IGNORE = (
 def filter_runnables(
     runnables: Tuple[Runnable, ...], all_runnables: Set[Runnable], granularity: str
 ) -> Tuple[Any, ...]:
-    if granularity == "label":
-        tasks = cast(List[Task], runnables)
-        return tuple(
-            task
-            for task in tasks
-            if task in all_runnables
-            and any(task.startswith(j) for j in JOBS_TO_CONSIDER)
-            and not any(j in task for j in JOBS_TO_IGNORE)
-        )
-    else:
+    if granularity != "label":
         return tuple(runnable for runnable in runnables if runnable in all_runnables)
+    tasks = cast(List[Task], runnables)
+    return tuple(
+        task
+        for task in tasks
+        if task in all_runnables
+        and any(task.startswith(j) for j in JOBS_TO_CONSIDER)
+        and all(j not in task for j in JOBS_TO_IGNORE)
+    )
 
 
 def rename_task(task: str) -> str:
@@ -614,15 +613,11 @@ def update_touched_together() -> Generator[None, Optional[Revision], None]:
             if len(commit["files"]) <= 50 and not commit["backedoutby"]:
                 # Number of times a source file was touched together with a directory.
                 for f1 in commit["files"]:
-                    for d2 in set(
-                        os.path.dirname(f) for f in commit["files"] if f != f1
-                    ):
+                    for d2 in {os.path.dirname(f) for f in commit["files"] if f != f1}:
                         set_touched_together(f1, d2)
 
                 # Number of times a directory was touched together with another directory.
-                for d1, d2 in itertools.combinations(
-                    list(set(os.path.dirname(f) for f in commit["files"])), 2
-                ):
+                for d1, d2 in itertools.combinations(list({os.path.dirname(f) for f in commit["files"]}), 2):
                     set_touched_together(d1, d2)
 
         elif last_analyzed == commit["node"].encode("ascii"):
@@ -818,20 +813,18 @@ def generate_data(
 
 def get_failure_bugs(since: datetime, until: datetime) -> List[Dict[str, int]]:
     r = requests.get(
-        "https://treeherder.mozilla.org/api/failures/?startday={}&endday={}&tree=trunk".format(
-            since.strftime("%Y-%m-%d"), until.strftime("%Y-%m-%d")
-        ),
+        f'https://treeherder.mozilla.org/api/failures/?startday={since.strftime("%Y-%m-%d")}&endday={until.strftime("%Y-%m-%d")}&tree=trunk',
         headers={"Accept": "application/json", "User-Agent": "bugbug"},
     )
+
     r.raise_for_status()
     return r.json()
 
 
 def get_test_info(date: datetime) -> Dict[str, Any]:
     r = requests.get(
-        "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.v2.mozilla-central.pushdate.{}.latest.source.test-info-all/artifacts/public/test-info-all-tests.json".format(
-            date.strftime("%Y.%m.%d")
-        )
+        f'https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.v2.mozilla-central.pushdate.{date.strftime("%Y.%m.%d")}.latest.source.test-info-all/artifacts/public/test-info-all-tests.json'
     )
+
     r.raise_for_status()
     return r.json()

@@ -84,21 +84,20 @@ class AssigneeModel(BugModel):
         self.clf.set_params(predictor="cpu_predictor")
 
     def get_labels(self):
-        classes = {}
+        classes = {
+            int(bug_data["id"]): bug_data["assigned_to_detail"]["email"]
+            for bug_data in bugzilla.get_bugs()
+            if bug_data["assigned_to_detail"]["email"] not in ADDRESSES_TO_EXCLUDE
+        }
 
-        for bug_data in bugzilla.get_bugs():
-            if bug_data["assigned_to_detail"]["email"] in ADDRESSES_TO_EXCLUDE:
-                continue
-
-            bug_id = int(bug_data["id"])
-            classes[bug_id] = bug_data["assigned_to_detail"]["email"]
 
         assignee_counts = Counter(classes.values()).most_common()
-        top_assignees = set(
+        top_assignees = {
             assignee
             for assignee, count in assignee_counts
             if count > MINIMUM_ASSIGNMENTS
-        )
+        }
+
 
         print(f"{len(top_assignees)} assignees")
         for assignee, count in assignee_counts:

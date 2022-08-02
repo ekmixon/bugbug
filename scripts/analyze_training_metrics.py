@@ -149,8 +149,8 @@ def analyze_metrics(
             metrics[model_name][f"{key}_std"][date] = value["std"]
 
     # Then analyze them
-    for model_name in metrics:
-        for metric_name, values in metrics[model_name].items():
+    for model_name, value_ in metrics.items():
+        for metric_name, values in value_.items():
 
             if metric_name.endswith("_std"):
                 LOGGER.info(
@@ -179,10 +179,10 @@ def analyze_metrics(
                 clean = False
 
             # Compute the relative threshold for the metric
-            if len(df["value"]) >= 2:
-                before_last_value = df["value"][-2]
-            else:
-                before_last_value = df["value"][-1]
+            before_last_value = (
+                df["value"][-2] if len(df["value"]) >= 2 else df["value"][-1]
+            )
+
             relative_metric_threshold = before_last_value * relative_threshold
             relative_threshold_crossed = df.value[-1] < relative_metric_threshold
 

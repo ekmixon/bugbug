@@ -79,11 +79,7 @@ REVIEWERS_RE = re.compile(
 
 
 def replace_reviewers(commit_description, reviewers):
-    if not reviewers:
-        reviewers_str = ""
-    else:
-        reviewers_str = "r=" + ",".join(reviewers)
-
+    reviewers_str = "r=" + ",".join(reviewers) if reviewers else ""
     if commit_description == "":
         return reviewers_str
 
@@ -92,7 +88,7 @@ def replace_reviewers(commit_description, reviewers):
     commit_description = "\n".join(commit_description)
 
     if not R_SPECIFIER_RE.search(commit_summary):
-        commit_summary += " " + reviewers_str
+        commit_summary += f" {reviewers_str}"
     else:
         # replace the first r? with the reviewer list, and all subsequent
         # occurrences with a marker to mark the blocks we need to remove
@@ -117,10 +113,11 @@ def replace_reviewers(commit_description, reviewers):
         commit_summary = re.sub(LIST + "\0", "", commit_summary)
         commit_summary = re.sub("\0", "", commit_summary)
 
-    if commit_description == "":
-        return commit_summary.strip()
-    else:
-        return commit_summary.strip() + "\n" + commit_description
+    return (
+        commit_summary.strip() + "\n" + commit_description
+        if commit_description
+        else commit_summary.strip()
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -163,18 +160,20 @@ class CommitClassifier(object):
             self.use_test_history = False
 
             model_data_X_path = f"{model_name}model_data_X"
-            updated = download_check_etag(
-                URL.format(model_name=model_name, file_name=f"{model_data_X_path}.zst")
-            )
-            if updated:
+            if updated := download_check_etag(
+                URL.format(
+                    model_name=model_name, file_name=f"{model_data_X_path}.zst"
+                )
+            ):
                 zstd_decompress(model_data_X_path)
             assert os.path.exists(model_data_X_path), "Decompressed X dataset exists"
 
             model_data_y_path = f"{model_name}model_data_y"
-            updated = download_check_etag(
-                URL.format(model_name=model_name, file_name=f"{model_data_y_path}.zst")
-            )
-            if updated:
+            if updated := download_check_etag(
+                URL.format(
+                    model_name=model_name, file_name=f"{model_data_y_path}.zst"
+                )
+            ):
                 zstd_decompress(model_data_y_path)
             assert os.path.exists(model_data_y_path), "Decompressed y dataset exists"
 
@@ -193,7 +192,7 @@ class CommitClassifier(object):
             with open(past_bugs_by_function_path, "r") as f:
                 self.past_bugs_by_function = json.load(f)
 
-        if model_name == "testlabelselect":
+        elif model_name == "testlabelselect":
             self.use_test_history = True
             assert db.download_support_file(
                 test_scheduling.TEST_LABEL_SCHEDULING_DB,
@@ -245,7 +244,7 @@ class CommitClassifier(object):
 
         repository.download_commits(
             self.repo_dir,
-            rev_start="children({})".format(commit["node"]),
+            rev_start=f'children({commit["node"]})',
             use_single_process=self.use_single_process,
         )
 
@@ -362,7 +361,7 @@ class CommitClassifier(object):
                     ),
                 )
             )
-            reviewers = set(reviewer["fields"]["username"] for reviewer in reviewers)
+            reviewers = {reviewer["fields"]["username"] for reviewer in reviewers}
 
             if len(reviewers):
                 message = replace_reviewers(message, reviewers)
@@ -546,7 +545,7 @@ class CommitClassifier(object):
             ]
 
             # If there are no easily explainable features in the group, select all features of the group.
-            if len(selected) == 0:
+            if not selected:
                 selected = feature_group
 
             def feature_sort_key(f):
@@ -610,7 +609,7 @@ class CommitClassifier(object):
             )
 
             # The commit to analyze was not in our DB, let's mine it.
-            if len(commits) == 0:
+            if not commits:
                 commits = repository.download_commits(
                     self.repo_dir,
                     revs=[revision.encode("ascii")],
@@ -789,11 +788,12 @@ class CommitClassifier(object):
 
                     if method_level_result["method_name"].endswith(function_name):
                         method_level_result["past_bugs"] = [
-                            "Bug {} - {}".format(bug["id"], bug["summary"])
-                            for bug in self.past_bugs_by_function[path][function_name][
-                                -3:
-                            ]
+                            f'Bug {bug["id"]} - {bug["summary"]}'
+                            for bug in self.past_bugs_by_function[path][
+                                function_name
+                            ][-3:]
                         ]
+
 
         with open("method_level.json", "w") as f:
             json.dump(method_level_results, f)

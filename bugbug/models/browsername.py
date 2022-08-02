@@ -70,11 +70,13 @@ class BrowserNameModel(IssueModel):
                 classes[issue["number"]] = 0
 
         logger.info(
-            f"{sum(1 for label in classes.values() if label == 1)} issues belong to Firefox"
+            f"{sum(label == 1 for label in classes.values())} issues belong to Firefox"
         )
+
         logger.info(
-            f"{sum(1 for label in classes.values() if label == 0)} issues do not belong to Firefox"
+            f"{sum(label == 0 for label in classes.values())} issues do not belong to Firefox"
         )
+
 
         return classes, [0, 1]
 

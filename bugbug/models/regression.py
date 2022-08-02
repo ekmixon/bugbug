@@ -16,16 +16,8 @@ class RegressionModel(DefectModel):
     def get_labels(self) -> Tuple[Dict[int, Any], List[int]]:
         classes = self.get_bugbug_labels("regression")
 
-        print(
-            "{} regression bugs".format(
-                sum(1 for label in classes.values() if label == 1)
-            )
-        )
-        print(
-            "{} non-regression bugs".format(
-                sum(1 for label in classes.values() if label == 0)
-            )
-        )
+        print(f"{sum(label == 1 for label in classes.values())} regression bugs")
+        print(f"{sum(label == 0 for label in classes.values())} non-regression bugs")
 
         return classes, [0, 1]
 
@@ -45,7 +37,7 @@ class RegressionModel(DefectModel):
                             regression_keyword_removed = False
 
             if regression_keyword_removed:
-                classes[i] = 0 if not probabilities else [1.0, 0.0]
+                classes[i] = [1.0, 0.0] if probabilities else 0
 
         super().overwrite_classes(bugs, classes, probabilities)
 

@@ -110,8 +110,9 @@ class FixTimeModel(BugModel):
 
         for i in range(len(quantiles) + 1):
             logger.info(
-                f"{sum(1 for label in classes.values() if label == i)} bugs are in the {i}th quantile"
+                f"{sum(label == i for label in classes.values())} bugs are in the {i}th quantile"
             )
+
 
         return classes, list(range(len(quantiles) + 1))
 

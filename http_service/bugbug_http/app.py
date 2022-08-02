@@ -297,7 +297,7 @@ def get_bugs_last_change_time(bug_ids):
 def get_github_issues_update_time(
     owner: str, repo: str, issue_nums: Sequence[int]
 ) -> dict:
-    header = {"Authorization": "token {}".format(GITHUB_TOKEN)}
+    header = {"Authorization": f"token {GITHUB_TOKEN}"}
     repo_url = f"https://api.github.com/repos/{owner}/{repo}/issues/"
 
     issues = {}
@@ -316,14 +316,11 @@ def is_prediction_invalidated(job, change_time):
     saved_change_time = redis_conn.get(job.change_time_key)
 
     # If we have no last changed time, the bug was not classified yet or the bug was classified by an old worker
-    if not saved_change_time:
-        # We can have a result without a cache time
-        if redis_conn.exists(job.result_key):
-            return True
-
-        return False
-
-    return saved_change_time.decode("utf-8") != change_time
+    return (
+        saved_change_time.decode("utf-8") != change_time
+        if saved_change_time
+        else bool(redis_conn.exists(job.result_key))
+    )
 
 
 def clean_prediction_cache(job):
@@ -336,9 +333,7 @@ def clean_prediction_cache(job):
 
 def get_result(job: JobInfo) -> Optional[Any]:
     LOGGER.debug(f"Checking for existing results at {job.result_key}")
-    result = redis_conn.get(job.result_key)
-
-    if result:
+    if result := redis_conn.get(job.result_key):
         LOGGER.debug(f"Found {result!r}")
         try:
             result = dctx.decompress(result)
@@ -412,13 +407,11 @@ def model_prediction(model_name, bug_id):
     """
     headers = request.headers
 
-    auth = headers.get(API_TOKEN)
-
-    if not auth:
-        return jsonify(UnauthorizedError().dump({})), 401
-    else:
+    if auth := headers.get(API_TOKEN):
         LOGGER.info("Request with API TOKEN %r", auth)
 
+    else:
+        return jsonify(UnauthorizedError().dump({})), 401
     if model_name not in MODELS_NAMES:
         return jsonify({"error": f"Model {model_name} doesn't exist"}), 404
 
@@ -491,13 +484,11 @@ def model_prediction_github(model_name, owner, repo, issue_num):
     """
     headers = request.headers
 
-    auth = headers.get(API_TOKEN)
-
-    if not auth:
-        return jsonify(UnauthorizedError().dump({})), 401
-    else:
+    if auth := headers.get(API_TOKEN):
         LOGGER.info("Request with API TOKEN %r", auth)
 
+    else:
+        return jsonify(UnauthorizedError().dump({})), 401
     if model_name not in MODELS_NAMES:
         return jsonify({"error": f"Model {model_name} doesn't exist"}), 404
 
@@ -637,13 +628,11 @@ def batch_prediction(model_name):
     """
     headers = request.headers
 
-    auth = headers.get(API_TOKEN)
-
-    if not auth:
-        return jsonify(UnauthorizedError().dump({})), 401
-    else:
+    if auth := headers.get(API_TOKEN):
         LOGGER.info("Request with API TOKEN %r", auth)
 
+    else:
+        return jsonify(UnauthorizedError().dump({})), 401
     if model_name not in MODELS_NAMES:
         return jsonify({"error": f"Model {model_name} doesn't exist"}), 404
 
@@ -728,20 +717,17 @@ def push_schedules(branch, rev):
     """
     headers = request.headers
 
-    auth = headers.get(API_TOKEN)
-
-    if not auth:
-        return jsonify(UnauthorizedError().dump({})), 401
-    else:
+    if auth := headers.get(API_TOKEN):
         LOGGER.info("Request with API TOKEN %r", auth)
 
+    else:
+        return jsonify(UnauthorizedError().dump({})), 401
     # Support the string 'autoland' for convenience.
     if branch == "autoland":
         branch = "integration/autoland"
 
     job = JobInfo(schedule_tests, branch, rev)
-    data = get_result(job)
-    if data:
+    if data := get_result(job):
         return compress_response(data, 200)
 
     if not is_pending(job):
@@ -785,13 +771,11 @@ def config_specific_groups(config: str) -> Tuple[Response, int]:
     """
     headers = request.headers
 
-    auth = headers.get(API_TOKEN)
-
-    if not auth:
-        return jsonify(UnauthorizedError().dump({})), 401
-    else:
+    if auth := headers.get(API_TOKEN):
         LOGGER.info("Request with API TOKEN %r", auth)
 
+    else:
+        return jsonify(UnauthorizedError().dump({})), 401
     job = JobInfo(get_config_specific_groups, config)
     data = get_result(job)
     if data is not None:

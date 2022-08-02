@@ -34,11 +34,12 @@ class Retriever(object):
 
         all_components = bugzilla.get_product_component_count(9999)
 
-        deleted_component_ids = set(
+        deleted_component_ids = {
             bug["id"]
             for bug in bugzilla.get_bugs()
-            if "{}::{}".format(bug["product"], bug["component"]) not in all_components
-        )
+            if f'{bug["product"]}::{bug["component"]}' not in all_components
+        }
+
         logger.info(
             f"{len(deleted_component_ids)} bugs belonging to deleted components"
         )
@@ -68,13 +69,14 @@ class Retriever(object):
         # Get IDs of bugs linked to commits (used for some commit-based models, e.g. backout and regressor).
         start_date = datetime.now() - relativedelta(years=3)
         commit_bug_ids = list(
-            set(
+            {
                 commit["bug_id"]
                 for commit in repository.get_commits()
                 if commit["bug_id"]
                 and dateutil.parser.parse(commit["pushdate"]) >= start_date
-            )
+            }
         )
+
         if limit:
             commit_bug_ids = commit_bug_ids[-limit:]
         logger.info(f"{len(commit_bug_ids)} bugs linked to commits to download.")
@@ -127,7 +129,7 @@ class Retriever(object):
         new_bugs = bugzilla.download_bugs(all_ids)
 
         # Get regression_related_ids again (the set could have changed after downloading new bugs).
-        for i in range(7):
+        for _ in range(7):
             regression_related_ids = list(
                 set(
                     sum(
@@ -153,13 +155,13 @@ class Retriever(object):
 
         # Try to re-download inconsistent bugs, up to twice.
         inconsistent_bugs = bugzilla.get_bugs(include_invalid=True)
-        for i in range(2):
+        for _ in range(2):
             # We look for inconsistencies in all bugs first, then, on following passes,
             # we only look for inconsistencies in bugs that were found to be inconsistent in the first pass
             inconsistent_bugs = bug_snapshot.get_inconsistencies(inconsistent_bugs)
-            inconsistent_bug_ids = set(bug["id"] for bug in inconsistent_bugs)
+            inconsistent_bug_ids = {bug["id"] for bug in inconsistent_bugs}
 
-            if len(inconsistent_bug_ids) == 0:
+            if not inconsistent_bug_ids:
                 break
 
             logger.info(

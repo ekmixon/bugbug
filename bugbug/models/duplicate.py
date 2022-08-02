@@ -79,12 +79,13 @@ class DuplicateModel(BugCoupleModel):
 
         random.seed(4)
 
-        all_ids = set(
+        all_ids = {
             bug["id"]
             for bug in bugzilla.get_bugs()
             if bug["creator"] not in REPORTERS_TO_IGNORE
             and "dupeme" not in bug["keywords"]
-        )
+        }
+
 
         classes = {}
 

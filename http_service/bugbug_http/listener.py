@@ -47,7 +47,7 @@ class HgPushesConsumer:
         self.connection = Connection(CONNECTION_URL.format(user, password))
         self.queues = [
             Queue(
-                name="queue/{}/pushes".format(user),
+                name=f"queue/{user}/pushes",
                 exchange=Exchange(
                     "exchange/hgpushes/v2",
                     type="topic",
@@ -58,6 +58,7 @@ class HgPushesConsumer:
                 auto_delete=True,
             )
         ]
+
         self.consumer = _GenericConsumer(self.connection, self.queues, callback)
 
     def __enter__(self):
@@ -82,14 +83,12 @@ def _on_message(body, message):
             if user in ("reviewbot", "wptsync@mozilla.com"):
                 return
 
-            url = "{}/push/{}/{}/schedules".format(BUGBUG_HTTP_SERVER, branch, rev)
+            url = f"{BUGBUG_HTTP_SERVER}/push/{branch}/{rev}/schedules"
             response = requests.get(url, headers={"X-Api-Key": "pulse_listener"})
             if response.status_code == 202:
-                logger.info("Successfully requested {}/{}".format(branch, rev))
+                logger.info(f"Successfully requested {branch}/{rev}")
             else:
-                logger.warning(
-                    "We got status: {} for: {}".format(response.status_code, url)
-                )
+                logger.warning(f"We got status: {response.status_code} for: {url}")
     except Exception:
         logger.warning(body)
         traceback.print_exc()

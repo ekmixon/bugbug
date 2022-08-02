@@ -66,11 +66,7 @@ def get_task_metrics_from_date(model, date, output_directory):
     # Split the date
     from_date = date.split(".")
 
-    namespaces = []
-
-    # Start at the root level
-    # We need an empty list in order to append namespaces part to it
-    namespaces.append([])
+    namespaces = [[]]
 
     # Recursively list all namespaces greater or equals than the given date
     while namespaces:

@@ -105,9 +105,9 @@ def boot_worker() -> None:
             )
 
     @tenacity.retry(
-        stop=tenacity.stop_after_attempt(7),
-        wait=tenacity.wait_exponential(multiplier=1, min=1, max=8),
-    )
+            stop=tenacity.stop_after_attempt(7),
+            wait=tenacity.wait_exponential(multiplier=1, min=1, max=8),
+        )
     def retrieve_schedulable_tasks() -> None:
         r = requests.get(
             "https://hg.mozilla.org/integration/autoland/json-pushes?version=2&tipsonly=1"
@@ -132,7 +132,7 @@ def boot_worker() -> None:
 
         logger.info(f"Retrieved {len(known_tasks)} tasks")
 
-        assert len(known_tasks) > 0
+        assert known_tasks
 
         with open("known_tasks", "w") as f:
             f.write("\n".join(known_tasks))

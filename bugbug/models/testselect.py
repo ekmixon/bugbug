@@ -47,15 +47,14 @@ logger = logging.getLogger(__name__)
 def get_commit_map(
     revs: Optional[Set[test_scheduling.Revision]] = None,
 ) -> Dict[test_scheduling.Revision, repository.CommitDict]:
-    commit_map = {}
+    commit_map = {
+        commit["node"]: commit
+        for commit in repository.get_commits()
+        if revs is None or commit["node"] in revs
+    }
 
-    for commit in repository.get_commits():
-        if revs is not None and commit["node"] not in revs:
-            continue
 
-        commit_map[commit["node"]] = commit
-
-    assert len(commit_map) > 0
+    assert commit_map
     return commit_map
 
 
@@ -150,9 +149,12 @@ class TestSelectModel(Model):
                 else:
                     passes.append(name)
 
-            if apply_filters:
-                if self.failures_skip and len(failures) > self.failures_skip:
-                    continue
+            if (
+                apply_filters
+                and self.failures_skip
+                and len(failures) > self.failures_skip
+            ):
+                continue
 
             pushes.append(
                 {
@@ -186,7 +188,7 @@ class TestSelectModel(Model):
             commits = tuple(
                 commit_map.pop(revision) for revision in revs if revision in commit_map
             )
-            assert len(commits) > 0
+            assert commits
 
             for test_data in test_datas:
                 name = test_data["name"]
@@ -209,22 +211,16 @@ class TestSelectModel(Model):
             for name in push["passes"]:
                 classes[(push["revs"][0], name)] = 0
 
-        print("{} pushes considered".format(len(pushes)))
+        print(f"{len(pushes)} pushes considered")
         print(
-            "{} pushes with at least one failure".format(
-                sum(1 for push in pushes if len(push["failures"]) > 0)
-            )
+            f'{sum(len(push["failures"]) > 0 for push in pushes)} pushes with at least one failure'
         )
+
+        print(f"{sum(label == 1 for label in classes.values())} push/jobs failed")
         print(
-            "{} push/jobs failed".format(
-                sum(1 for label in classes.values() if label == 1)
-            )
+            f"{sum(label == 0 for label in classes.values())} push/jobs did not fail"
         )
-        print(
-            "{} push/jobs did not fail".format(
-                sum(1 for label in classes.values() if label == 0)
-            )
-        )
+
 
         return classes, [0, 1]
 
@@ -366,11 +362,7 @@ class TestSelectModel(Model):
                 try:
                     support, confidence = failing_together_stats[task2]
                 except KeyError:
-                    if not assume_redundant:
-                        confidence = 0.0
-                    else:
-                        confidence = 1.0
-
+                    confidence = 1.0 if assume_redundant else 0.0
                 if confidence >= min_redundancy_confidence:
                     add_to_groups(task1, task2)
                 else:
@@ -485,8 +477,9 @@ class TestSelectModel(Model):
 
         # Choose the best set of tasks that satisfy the constraints with the lowest cost.
         solver.Minimize(
-            sum(self._get_cost(task) * task_vars[task] for task in task_vars.keys())
+            sum(self._get_cost(task) * task_vars[task] for task in task_vars)
         )
+
 
         if self._solve_optimization(solver):
             return {
@@ -556,14 +549,7 @@ class TestSelectModel(Model):
                     solver.Add(sum_constraint >= set_variable)
 
             # Cap to max_configurations equivalence sets.
-            solver.Add(
-                sum(set_variables)
-                >= (
-                    max_configurations
-                    if len(set_variables) >= max_configurations
-                    else len(set_variables)
-                )
-            )
+            solver.Add(sum(set_variables) >= min(len(set_variables), max_configurations))
 
         for config in all_configs:
             solver.Add(
@@ -584,17 +570,17 @@ class TestSelectModel(Model):
         # group that can run either on the costly one or on a cheaper one, they'd both run
         # on the costly one (since we have to pay its setup cost anyway).
         solver.Minimize(
-            sum(10 * config_costs[c] * config_vars[c] for c in config_vars.keys())
-            + sum(
-                config_costs[config] * config_group_vars[(config, group)]
-                for config, group in config_group_vars.keys()
+            (
+                sum(10 * config_costs[c] * config_vars[c] for c in config_vars)
+                + sum(
+                    config_costs[config] * config_group_vars[(config, group)]
+                    for config, group in config_group_vars
+                )
             )
         )
 
-        configs_by_group: Dict[str, List[str]] = {}
-        for group in groups:
-            configs_by_group[group] = []
 
+        configs_by_group: Dict[str, List[str]] = {group: [] for group in groups}
         if self._solve_optimization(solver):
             for (config, group), config_group_var in config_group_vars.items():
                 if config_group_var.solution_value() == 1:

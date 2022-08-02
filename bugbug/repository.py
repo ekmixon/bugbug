@@ -47,7 +47,7 @@ CommitDict = NewType("CommitDict", dict)
 
 code_analysis_server: Optional[rust_code_analysis_server.RustCodeAnalysisServer] = None
 
-hg_servers = list()
+hg_servers = []
 hg_servers_lock = threading.Lock()
 thread_local = threading.local()
 
@@ -109,7 +109,7 @@ OTHER_TYPES_TO_EXT = {
 
 HARDCODED_TYPES = {".eslintrc.js": ".eslintrc.js"}
 
-TYPES_TO_EXT = {**SOURCE_CODE_TYPES_TO_EXT, **OTHER_TYPES_TO_EXT}
+TYPES_TO_EXT = SOURCE_CODE_TYPES_TO_EXT | OTHER_TYPES_TO_EXT
 
 EXT_TO_TYPES = {ext: typ for typ, exts in TYPES_TO_EXT.items() for ext in exts}
 
@@ -229,12 +229,13 @@ class Commit:
         self.files = files
         self.file_copies = file_copies
         self.components = list(
-            set(
+            {
                 path_to_component[path.encode("utf-8")].tobytes().decode("utf-8")
                 for path in files
                 if path.encode("utf-8") in path_to_component
-            )
+            }
         )
+
         self.directories = get_directories(files)
         return self
 
@@ -312,9 +313,7 @@ def get_commits(
 
 def get_revision_id(commit: CommitDict) -> Optional[int]:
     match = PHABRICATOR_REVISION_REGEX.search(commit["desc"])
-    if not match:
-        return None
-    return int(match.group(2))
+    return int(match.group(2)) if match else None
 
 
 def _init_process(repo_dir: str) -> None:

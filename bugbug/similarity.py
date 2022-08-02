@@ -67,8 +67,7 @@ def download_similarity_model(model_name):
     url = f"https://community-tc.services.mozilla.com/api/index/v1/task/project.bugbug.train_similarity.latest/artifacts/public/{path}.zst"
 
     logger.info(f"Downloading similarity model from {url}...")
-    updated = download_check_etag(url)
-    if updated:
+    if updated := download_check_etag(url):
         zstd_decompress(path)
         os.remove(f"{path}.zst")
     assert os.path.exists(path), "Decompressed file exists"
@@ -112,7 +111,7 @@ class BaseSimilarity(abc.ABC):
         else:
             comments = bug["comments"][0]["text"]
 
-        return "{} {}".format(bug["summary"], comments)
+        return f'{bug["summary"]} {comments}'
 
     def get_similar_bugs(self, bug):
         similar_bug_ids = self.search_similar_bugs(bug)
@@ -161,19 +160,18 @@ class BaseSimilarity(abc.ABC):
         else:
             text = text.split()
 
-        if join:
-            return " ".join(word for word in text)
-        return text
+        return " ".join(text) if join else text
 
     def evaluation(self):
         # A map from bug ID to its duplicate IDs
         duplicates = defaultdict(set)
-        all_ids = set(
+        all_ids = {
             bug["id"]
             for bug in bugzilla.get_bugs()
             if bug["creator"] not in REPORTERS_TO_IGNORE
             and "dupeme" not in bug["keywords"]
-        )
+        }
+
 
         for bug in bugzilla.get_bugs():
             dupes = [entry for entry in bug["duplicates"] if entry in all_ids]
@@ -300,7 +298,7 @@ class LSISimilarity(BaseSimilarity):
         )
 
     def search_similar_bugs(self, query, k=10):
-        query_summary = "{} {}".format(query["summary"], query["comments"][0]["text"])
+        query_summary = f'{query["summary"]} {query["comments"][0]["text"]}'
         query_summary = self.text_preprocess(query_summary)
 
         # Transforming the query to latent 300-D space
@@ -477,8 +475,9 @@ class Word2VecWmdSimilarity(Word2VecSimilarityBase):
             cleaned_corpus = [
                 word for word in self.corpus[i] if word in self.w2vmodel.wv.vocab
             ]
-            indexes = [self.w2vmodel.wv.vocab[word].index for word in cleaned_corpus]
-            if len(indexes) != 0:
+            if indexes := [
+                self.w2vmodel.wv.vocab[word].index for word in cleaned_corpus
+            ]:
                 word_dists = all_distances[indexes]
                 rwmd = max(
                     np.sum(np.min(word_dists, axis=0)),
@@ -492,8 +491,7 @@ class Word2VecWmdSimilarity(Word2VecSimilarityBase):
         confirmed_distances_ids = []
         confirmed_distances = []
 
-        for i, (doc_id, rwmd_distance) in enumerate(distances):
-
+        for doc_id, rwmd_distance in distances:
             if (
                 len(confirmed_distances) >= 10
                 and rwmd_distance > confirmed_distances[10 - 1]
@@ -528,9 +526,7 @@ class Word2VecWmdSimilarity(Word2VecSimilarityBase):
 
         all_distances = self.calculate_all_distances(words1)
 
-        wmd = self.wmdistance(words1, words2, all_distances)
-
-        return wmd
+        return self.wmdistance(words1, words2, all_distances)
 
 
 class Word2VecWmdRelaxSimilarity(Word2VecSimilarityBase):
@@ -584,13 +580,12 @@ class Word2VecWmdRelaxSimilarity(Word2VecSimilarityBase):
         embeddings = np.array(
             [self.w2vmodel.wv[word] for word in words], dtype=np.float32
         )
-        nbow = dict(
-            (
-                (index, list(chain([None], zip(*document))))
-                for index, document in enumerate(documents)
-                if document != []
-            )
-        )
+        nbow = {
+            index: list(chain([None], zip(*document)))
+            for index, document in enumerate(documents)
+            if document != []
+        }
+
         nbow["query"] = tuple([None] + list(zip(*query)))
         distances = WMD(embeddings, nbow, vocabulary_min=1).nearest_neighbors("query")
 
@@ -633,9 +628,11 @@ class Word2VecWmdRelaxSimilarity(Word2VecSimilarityBase):
         embeddings = np.array(
             [self.w2vmodel.wv[word] for word in words], dtype=np.float32
         )
-        nbow = {}
-        nbow["query1"] = tuple([None] + list(zip(*query1)))
-        nbow["query2"] = tuple([None] + list(zip(*query2)))
+        nbow = {
+            "query1": tuple([None] + list(zip(*query1))),
+            "query2": tuple([None] + list(zip(*query2))),
+        }
+
         distances = WMD(embeddings, nbow, vocabulary_min=1).nearest_neighbors("query1")
 
         return distances[0][1]
@@ -811,12 +808,11 @@ class ElasticSearchSimilarity(BaseSimilarity):
 
         result = self.elastic_search.search(index="bugbug", body={"query": es_query})
 
-        top_similar = [
+        return [
             result["hits"]["hits"][i]["_source"]["bug_id"]
             for i in range(len(result["hits"]["hits"]))
             if result["hits"]["hits"][i]["_source"]["bug_id"] != query["id"]
         ]
-        return top_similar
 
     def get_distance(self, query1, query2):
         raise NotImplementedError

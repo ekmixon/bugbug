@@ -105,15 +105,13 @@ class SpamBugModel(BugModel):
                 classes[bug_id] = 1
 
         print(
-            "{} bugs are classified as non-spam".format(
-                sum(1 for label in classes.values() if label == 0)
-            )
+            f"{sum(label == 0 for label in classes.values())} bugs are classified as non-spam"
         )
+
         print(
-            "{} bugs are classified as spam".format(
-                sum(1 for label in classes.values() if label == 1)
-            )
+            f"{sum(label == 1 for label in classes.values())} bugs are classified as spam"
         )
+
 
         return classes, [0, 1]
 
@@ -132,9 +130,5 @@ class SpamBugModel(BugModel):
     def overwrite_classes(self, bugs, classes, probabilities):
         for (i, bug) in enumerate(bugs):
             if "@mozilla" in bug["creator"]:
-                if probabilities:
-                    classes[i] = [1.0, 0.0]
-                else:
-                    classes[i] = 0
-
+                classes[i] = [1.0, 0.0] if probabilities else 0
         return classes

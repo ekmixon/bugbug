@@ -13,7 +13,7 @@ here = os.path.dirname(__file__)
 
 def read_requirements(file_):
     with open(os.path.join(here, file_)) as f:
-        return sorted(list(set(line.split("#")[0].strip() for line in f)))
+        return sorted(list({line.split("#")[0].strip() for line in f}))
 
 
 install_requires = read_requirements("requirements.txt")

@@ -130,13 +130,14 @@ class RegressorModel(CommitModel):
 
         if self.use_finder or self.exclude_finder:
             if self.finder_regressions_only:
-                regression_fixes = set(
+                regression_fixes = {
                     bug_fixing_commit["rev"]
                     for bug_fixing_commit in db.read(BUG_FIXING_COMMITS_DB)
                     if bug_fixing_commit["type"] == "r"
-                )
+                }
 
-            regressors = set(
+
+            regressors = {
                 r["bug_introducing_rev"]
                 for r in db.read(BUG_INTRODUCING_COMMITS_DB)
                 if r["bug_introducing_rev"]
@@ -144,7 +145,8 @@ class RegressorModel(CommitModel):
                     not self.finder_regressions_only
                     or r["bug_fixing_rev"] in regression_fixes
                 )
-            )
+            }
+
 
         regressor_bugs = set(
             sum((bug["regressed_by"] for bug in bugzilla.get_bugs()), [])
@@ -189,16 +191,14 @@ class RegressorModel(CommitModel):
                 classes[node] = 0
 
         print(
-            "{} commits caused regressions".format(
-                sum(1 for label in classes.values() if label == 1)
-            )
+            f"{sum(label == 1 for label in classes.values())} commits caused regressions"
         )
 
+
         print(
-            "{} commits did not cause regressions".format(
-                sum(1 for label in classes.values() if label == 0)
-            )
+            f"{sum(label == 0 for label in classes.values())} commits did not cause regressions"
         )
+
 
         return classes, [0, 1]
 
@@ -225,7 +225,7 @@ class RegressorModel(CommitModel):
             commits.append(commit_data)
 
         print(f"{len(commits)} commits in the evaluation set")
-        bugs_num = len(set(commit["bug_id"] for commit in commits))
+        bugs_num = len({commit["bug_id"] for commit in commits})
         print(f"{bugs_num} bugs in the evaluation set")
 
         # Sort commits by bug ID, so we can use itertools.groupby to group them by bug ID.
@@ -339,6 +339,6 @@ class RegressorModel(CommitModel):
     def overwrite_classes(self, commits, classes, probabilities):
         for i, commit in enumerate(commits):
             if repository.is_wptsync(commit):
-                classes[i] = 0 if not probabilities else [1.0, 0.0]
+                classes[i] = [1.0, 0.0] if probabilities else 0
 
         return classes

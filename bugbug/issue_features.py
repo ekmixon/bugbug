@@ -26,14 +26,16 @@ class IssueExtractor(BaseEstimator, TransformerMixin):
         rollback=False,
         rollback_when=None,
     ):
-        assert len(set(type(fe) for fe in feature_extractors)) == len(
+        assert len({type(fe) for fe in feature_extractors}) == len(
             feature_extractors
         ), "Duplicate Feature Extractors"
+
         self.feature_extractors = feature_extractors
 
-        assert len(set(type(cf) for cf in cleanup_functions)) == len(
+        assert len({type(cf) for cf in cleanup_functions}) == len(
             cleanup_functions
         ), "Duplicate Cleanup Functions"
+
         self.cleanup_functions = cleanup_functions
         self.rollback = rollback
         self.rollback_when = rollback_when

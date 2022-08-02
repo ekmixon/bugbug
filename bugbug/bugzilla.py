@@ -108,7 +108,7 @@ def get(ids_or_query):
         bug_id = int(bug["id"])
 
         if bug_id not in new_bugs:
-            new_bugs[bug_id] = dict()
+            new_bugs[bug_id] = {}
 
         new_bugs[bug_id].update(bug)
 
@@ -116,7 +116,7 @@ def get(ids_or_query):
         bug_id = int(bug_id)
 
         if bug_id not in new_bugs:
-            new_bugs[bug_id] = dict()
+            new_bugs[bug_id] = {}
 
         new_bugs[bug_id]["comments"] = bug["comments"]
 
@@ -124,7 +124,7 @@ def get(ids_or_query):
         bug_id = int(bug_id)
 
         if bug_id not in new_bugs:
-            new_bugs[bug_id] = dict()
+            new_bugs[bug_id] = {}
 
         new_bugs[bug_id]["attachments"] = bug
 
@@ -132,7 +132,7 @@ def get(ids_or_query):
         bug_id = int(bug["id"])
 
         if bug_id not in new_bugs:
-            new_bugs[bug_id] = dict()
+            new_bugs[bug_id] = {}
 
         new_bugs[bug_id]["history"] = bug["history"]
 
@@ -174,7 +174,7 @@ def get_ids_between(date_from, date_to=None, security=False, resolution=None):
 
 def download_bugs(bug_ids: Iterable[int], security: bool = False) -> List[BugDict]:
     old_bug_count = 0
-    new_bug_ids_set = set(int(bug_id) for bug_id in bug_ids)
+    new_bug_ids_set = {int(bug_id) for bug_id in bug_ids}
     for bug in get_bugs(include_invalid=True):
         old_bug_count += 1
         new_bug_ids_set.discard(int(bug["id"]))
@@ -224,7 +224,7 @@ def _find_linked(
             for b in bug[link_type]
             if b in bug_map
         ),
-        [b for b in bug[link_type] if b in bug_map],
+        (b for b in bug[link_type] if b in bug_map),
     )
 
 
@@ -245,8 +245,7 @@ def get_fixed_versions(bug):
         re.compile("Firefox ([0-9]+)"),
     ]
     for target_milestone_pattern in target_milestone_patterns:
-        m = target_milestone_pattern.match(bug["target_milestone"])
-        if m:
+        if m := target_milestone_pattern.match(bug["target_milestone"]):
             versions.add(int(m.group(1)))
 
     status_pattern = re.compile("cf_status_firefox([0-9]+)")
@@ -254,9 +253,8 @@ def get_fixed_versions(bug):
         if value != "fixed":
             continue
 
-        m = status_pattern.match(field)
-        if m:
-            versions.add(int(m.group(1)))
+        if m := status_pattern.match(field):
+            versions.add(int(m[1]))
 
     return list(versions)
 
@@ -272,9 +270,7 @@ def count_bugs(bug_query_params):
         "https://bugzilla.mozilla.org/rest/bug", params=bug_query_params
     )
     r.raise_for_status()
-    count = r.json()["bug_count"]
-
-    return count
+    return r.json()["bug_count"]
 
 
 def get_product_component_count(months: int = 12) -> Dict[str, int]:

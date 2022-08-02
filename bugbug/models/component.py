@@ -127,24 +127,27 @@ class ComponentModel(BugModel):
         if (product, component) in self.meaningful_product_components:
             return full_comp
 
-        for conflated_component in self.CONFLATED_COMPONENTS:
-            if full_comp.startswith(conflated_component):
-                return conflated_component
-
-        return None
+        return next(
+            (
+                conflated_component
+                for conflated_component in self.CONFLATED_COMPONENTS
+                if full_comp.startswith(conflated_component)
+            ),
+            None,
+        )
 
     def get_labels(self):
-        product_components = {}
-        for bug_data in bugzilla.get_bugs():
-            if dateutil.parser.parse(bug_data["creation_time"]).replace(
-                tzinfo=None
-            ) < datetime.utcnow() - relativedelta(years=2):
-                continue
-
-            product_components[bug_data["id"]] = (
+        product_components = {
+            bug_data["id"]: (
                 bug_data["product"],
                 bug_data["component"],
             )
+            for bug_data in bugzilla.get_bugs()
+            if dateutil.parser.parse(bug_data["creation_time"]).replace(
+                tzinfo=None
+            )
+            >= datetime.utcnow() - relativedelta(years=2)
+        }
 
         self.meaningful_product_components = self.get_meaningful_product_components(
             (
@@ -156,13 +159,11 @@ class ComponentModel(BugModel):
 
         classes = {}
         for bug_id, (product, component) in product_components.items():
-            component = self.filter_component(product, component)
-
-            if component:
+            if component := self.filter_component(product, component):
                 classes[bug_id] = component
 
         component_counts = Counter(classes.values()).most_common()
-        top_components = set(component for component, count in component_counts)
+        top_components = {component for component, count in component_counts}
 
         print(f"{len(top_components)} components")
         for component, count in component_counts:
@@ -216,11 +217,11 @@ class ComponentModel(BugModel):
         max_count = product_component_counts[0][1]
         threshold = max_count / threshold_ratio
 
-        return set(
+        return {
             product_component
             for product_component, count in product_component_counts
             if count > threshold
-        )
+        }
 
     def get_feature_names(self):
         return self.extraction_pipeline.named_steps["union"].get_feature_names()

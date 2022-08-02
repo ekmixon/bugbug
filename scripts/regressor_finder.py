@@ -169,10 +169,9 @@ class RegressorFinder(object):
         logger.info(f"{len(commits_to_ignore)} commits to ignore...")
 
         logger.info(
-            "...of which {} are backed-out".format(
-                sum(1 for commit in commits_to_ignore if commit["type"] == "backedout")
-            )
+            f'...of which {sum(commit["type"] == "backedout" for commit in commits_to_ignore)} are backed-out'
         )
+
 
         db.write(IGNORED_COMMITS_DB, commits_to_ignore)
         zstd_compress(IGNORED_COMMITS_DB)
@@ -189,10 +188,11 @@ class RegressorFinder(object):
         db.download(BUG_FIXING_COMMITS_DB)
 
         logger.info("Get previously classified commits...")
-        prev_bug_fixing_commits_nodes = set(
+        prev_bug_fixing_commits_nodes = {
             bug_fixing_commit["rev"]
             for bug_fixing_commit in db.read(BUG_FIXING_COMMITS_DB)
-        )
+        }
+
         logger.info(
             f"Already classified {len(prev_bug_fixing_commits_nodes)} commits..."
         )
@@ -228,7 +228,7 @@ class RegressorFinder(object):
         logger.info(
             f"{sum(len(commit_list) for commit_list in commit_map.values())} commits found, {len(commit_map)} bugs linked to commits"
         )
-        assert len(commit_map) > 0
+        assert commit_map
 
         def get_relevant_bugs() -> Iterator[dict]:
             return (bug for bug in bugzilla.get_bugs() if bug["id"] in commit_map)
@@ -334,15 +334,16 @@ class RegressorFinder(object):
 
         logger.info("Get previously found bug-introducing commits...")
         prev_bug_introducing_commits = list(db.read(db_path))
-        prev_bug_introducing_commits_nodes = set(
+        prev_bug_introducing_commits_nodes = {
             bug_introducing_commit["bug_fixing_rev"]
             for bug_introducing_commit in prev_bug_introducing_commits
-        )
+        }
+
         logger.info(
             f"Already classified {len(prev_bug_introducing_commits)} commits..."
         )
 
-        hashes_to_ignore = set(commit["rev"] for commit in commits_to_ignore)
+        hashes_to_ignore = {commit["rev"] for commit in commits_to_ignore}
 
         with open("git_hashes_to_ignore", "w") as f:
             git_hashes = mercurial_to_git(
@@ -408,10 +409,10 @@ class RegressorFinder(object):
 
             def get_modification_path(mod):
                 path = mod.new_path
-                if (
-                    mod.change_type == ModificationType.RENAME
-                    or mod.change_type == ModificationType.DELETE
-                ):
+                if mod.change_type in [
+                    ModificationType.RENAME,
+                    ModificationType.DELETE,
+                ]:
                     path = mod.old_path
                 return path
 
@@ -459,7 +460,7 @@ class RegressorFinder(object):
                             raise
 
             # Add an empty result, just so that we don't reanalyze this again.
-            if len(bug_introducing_commits) == 0:
+            if not bug_introducing_commits:
                 bug_introducing_commits.append(
                     {
                         "bug_fixing_rev": bug_fixing_commit["rev"],
@@ -530,10 +531,12 @@ def evaluate(bug_introducing_commits):
         bug_to_commits_map[commit["bug_id"]].append(commit["node"])
 
     logger.info("Loading known regressors using regressed-by information...")
-    known_regressors = {}
-    for bug in tqdm(bugzilla.get_bugs()):
-        if bug["regressed_by"]:
-            known_regressors[bug["id"]] = bug["regressed_by"]
+    known_regressors = {
+        bug["id"]: bug["regressed_by"]
+        for bug in tqdm(bugzilla.get_bugs())
+        if bug["regressed_by"]
+    }
+
     logger.info(f"Loaded {len(known_regressors)} known regressors")
 
     fix_to_regressors_map = defaultdict(list)
@@ -557,13 +560,16 @@ def evaluate(bug_introducing_commits):
     misassigned_regressors = 0
     for bug_id, regressor_bugs in tqdm(known_regressors.items()):
         # Get all commits which fixed the bug.
-        fix_commits = bug_to_commits_map[bug_id] if bug_id in bug_to_commits_map else []
+        fix_commits = bug_to_commits_map.get(bug_id, [])
         if len(fix_commits) == 0:
             continue
 
         # Skip bug/regressor when we didn't analyze the commits to fix the bug (as
         # certainly we can't have found the regressor in this case).
-        if not any(fix_commit in fix_to_regressors_map for fix_commit in fix_commits):
+        if all(
+            fix_commit not in fix_to_regressors_map
+            for fix_commit in fix_commits
+        ):
             continue
 
         # Get all commits linked to the regressor bug.
@@ -572,9 +578,7 @@ def evaluate(bug_introducing_commits):
             if regressor_bug not in bug_to_commits_map:
                 continue
 
-            regressor_commits += (
-                commit for commit in bug_to_commits_map[regressor_bug]
-            )
+            regressor_commits += iter(bug_to_commits_map[regressor_bug])
 
         if len(regressor_commits) == 0:
             continue
@@ -598,9 +602,9 @@ def evaluate(bug_introducing_commits):
 
         all_regressors += 1
 
-        if found_good and not found_bad:
-            perfect_regressors += 1
         if found_good:
+            if not found_bad:
+                perfect_regressors += 1
             found_regressors += 1
         if found_bad:
             misassigned_regressors += 1

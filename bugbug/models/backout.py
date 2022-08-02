@@ -108,15 +108,13 @@ class BackoutModel(CommitModel):
             classes[commit_data["node"]] = 1 if commit_data["backedoutby"] else 0
 
         print(
-            "{} commits were backed out".format(
-                sum(1 for label in classes.values() if label == 1)
-            )
+            f"{sum(label == 1 for label in classes.values())} commits were backed out"
         )
+
         print(
-            "{} commits were not backed out".format(
-                sum(1 for label in classes.values() if label == 0)
-            )
+            f"{sum(label == 0 for label in classes.values())} commits were not backed out"
         )
+
 
         return classes, [0, 1]
 

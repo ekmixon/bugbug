@@ -29,8 +29,9 @@ def replace_with_private(original_data: List[IssueDict]) -> Tuple[List[IssueDict
                 continue
 
             owner, repo, issue_number = extracted
-            private_issue = github.fetch_issue_by_number(owner, repo, issue_number)
-            if private_issue:
+            if private_issue := github.fetch_issue_by_number(
+                owner, repo, issue_number
+            ):
                 item["title"] = private_issue["title"]
                 item["body"] = private_issue["body"]
                 updated_ids.add(item["id"])
@@ -71,7 +72,7 @@ class Retriever(object):
                 )
                 replace_with_private(data)
 
-            updated_ids = set(issue["id"] for issue in data)
+            updated_ids = {issue["id"] for issue in data}
 
             logger.info(
                 "Deleting issues that were changed since the last run and saving updates"

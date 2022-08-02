@@ -74,14 +74,11 @@ def get_model_names(task_id: str) -> List[str]:
 
     for i, task_id in enumerate(task["dependencies"]):
         LOGGER.info(
-            "Loading task dependencies {}/{} {}".format(
-                i + 1, len(task["dependencies"]), task_id
-            )
+            f'Loading task dependencies {i + 1}/{len(task["dependencies"])} {task_id}'
         )
 
-        model_name = get_model_name(queue, task_id)
 
-        if model_name:
+        if model_name := get_model_name(queue, task_id):
             LOGGER.info("Adding model %r to download list", model_name)
             model_names.append(model_name)
 

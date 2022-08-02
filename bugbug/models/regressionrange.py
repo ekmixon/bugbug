@@ -66,23 +66,27 @@ class RegressionRangeModel(BugModel):
 
         for bug_data in bugzilla.get_bugs():
             bug_id = int(bug_data["id"])
-            if "regressionwindow-wanted" in bug_data["keywords"]:
+            if (
+                "regressionwindow-wanted" not in bug_data["keywords"]
+                and "cf_has_regression_range" in bug_data
+                and bug_data["cf_has_regression_range"] == "yes"
+            ):
+                classes[bug_id] = 1
+            elif (
+                "regressionwindow-wanted" not in bug_data["keywords"]
+                and "cf_has_regression_range" in bug_data
+                and bug_data["cf_has_regression_range"] == "no"
+                or "regressionwindow-wanted" in bug_data["keywords"]
+            ):
                 classes[bug_id] = 0
-            elif "cf_has_regression_range" in bug_data:
-                if bug_data["cf_has_regression_range"] == "yes":
-                    classes[bug_id] = 1
-                elif bug_data["cf_has_regression_range"] == "no":
-                    classes[bug_id] = 0
         print(
-            "{} bugs have regression range".format(
-                sum(1 for label in classes.values() if label == 1)
-            )
+            f"{sum(label == 1 for label in classes.values())} bugs have regression range"
         )
+
         print(
-            "{} bugs don't have a regression range".format(
-                sum(1 for label in classes.values() if label == 0)
-            )
+            f"{sum(label == 0 for label in classes.values())} bugs don't have a regression range"
         )
+
 
         return classes, [0, 1]
 
